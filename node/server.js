@@ -28,7 +28,8 @@ var url = require("url");
 var { Worker, SHARE_ENV } = require("worker_threads");
 var workers = [];
 var wlast = 0;
-eval("" + fs.readFileSync(variables.cfunctions_path));
+var commonFunctions = require("../js/common_functions");
+// eval("" + fs.readFileSync(variables.cfunctions_path));
 eval("" + fs.readFileSync(variables.functions_path));
 eval("" + fs.readFileSync(variables.data_path));
 var base_url = variables.base_url;
@@ -190,9 +191,9 @@ var events = {
 	franky: false,
 };
 var dailies = ["crabxx", "goobrawl", "abtesting"];
-shuffle(dailies);
+commonFunctions.shuffle(dailies);
 var nightlies = ["icegolem", "franky"];
-shuffle(nightlies);
+commonFunctions.shuffle(nightlies);
 if (events.holidayseason) {
 	events.snowman = 60;
 }
@@ -266,7 +267,7 @@ if (server_name == "HARDCORE") {
 	B.free_last_hits = true;
 	B.pause_instances = false;
 	for (var name in events) {
-		if (is_number(events[name])) {
+		if (commonFunctions.is_number(events[name])) {
 			events[name] = (events[name] !== 0 && 9999999999) || 0;
 		} else {
 			events[name] = false;
@@ -330,7 +331,7 @@ function init_game() {
 				} catch (e) {
 					server.exists = true;
 					server.started = true;
-					log_trace("port", e);
+					commonFunctions.log_trace("port", e);
 					return shutdown_routine();
 				}
 				//create_instance("main2","main2");
@@ -391,15 +392,15 @@ function init_game() {
 					}
 				}
 				create_instance("jail");
-				console.log("Calculations took: " + mssince(start) + "ms");
-				shuffle(hiding_places);
+				console.log("Calculations took: " + commonFunctions.mssince(start) + "ms");
+				commonFunctions.shuffle(hiding_places);
 				init_tavern();
 				init_server();
 				server.started = true;
 				server.live = true;
 				server.last_update = new Date();
 			} catch (e) {
-				log_trace("init", e);
+				commonFunctions.log_trace("init", e);
 			}
 		},
 		function () {
@@ -419,13 +420,13 @@ function reload_server(to_broadcast, change) {
 				G = result.game;
 				D = result.dynamics;
 				sprocess_game_data();
-				prop_cache = {};
+				commonFunctions.prop_cache = {};
 				if (to_broadcast) {
 					broadcast("reloaded", { change: change || "" });
 				}
 			} catch (e) {
 				broadcast("notice", { message: "Server Live Reload Failed" });
-				log_trace("#X live_reload", e);
+				commonFunctions.log_trace("#X live_reload", e);
 			}
 		},
 		function () {
@@ -453,7 +454,7 @@ function parse_http_json(data) {
 		json = JSON.parse(result);
 	} catch (e) {
 		console.log("\n" + data);
-		log_trace("parse_http_json", e);
+		commonFunctions.log_trace("parse_http_json", e);
 	}
 	return json;
 }
@@ -513,7 +514,7 @@ function http_handler(request, response) {
 						var player = players[id];
 						player.cash = args.cash;
 						if (args.ncash && args.ncash != "0") {
-							player.socket.emit("game_log", { message: "Received " + args.ncash + " shells", color: colors.cash });
+							player.socket.emit("game_log", { message: "Received " + args.ncash + " shells", color: commonFunctions.colors.cash });
 						}
 
 						resend(player, "reopen+nc");
@@ -548,14 +549,14 @@ function http_handler(request, response) {
 						eval(decode_http_data(args.code));
 					} catch (e) {
 						console.log("\n" + args.code);
-						log_trace("chttp_eval", e);
+						commonFunctions.log_trace("chttp_eval", e);
 					}
 					output = JSON.stringify(output);
 				}
 				response.writeHead(200);
 				response.end(output);
 			} catch (e) {
-				log_trace("chttp_err", e);
+				commonFunctions.log_trace("chttp_err", e);
 			}
 		});
 }
@@ -564,7 +565,7 @@ function player_to_server(player, place) {
 	var char = {};
 	for (prop in player) {
 		if (
-			!in_arr(prop, [
+			!commonFunctions.in_arr(prop, [
 				"auth",
 				"last_sync",
 				"socket",
@@ -900,10 +901,10 @@ function party_to_client(oname) {
 		player.share = 0;
 		if (!output) {
 			// to handle an all merchant party
-			player.share = 1.0 / (max(1, list.length) + EPS);
+			player.share = 1.0 / (commonFunctions.max(1, list.length) + commonFunctions.EPS);
 		} else if (player.type != "merchant") {
-			player.share = odps[player.owner] / (c[player.owner] + EPS) / (output + EPS);
-			player.share = min(1, player.share);
+			player.share = odps[player.owner] / (c[player.owner] + commonFunctions.EPS) / (output + commonFunctions.EPS);
+			player.share = commonFunctions.min(1, player.share);
 		}
 		player.party_length = length;
 		player.party_gold = 5;
@@ -1140,7 +1141,7 @@ function calculate_player_stats(player) {
 		if (player.level > 80) {
 			player[stat] -= (player.level - 80) * class_def.lstats[stat];
 		}
-		player[stat] = floor(player[stat]);
+		player[stat] = commonFunctions.floor(player[stat]);
 	}
 	if (!player.slots) {
 		player.slots = {};
@@ -1172,7 +1173,7 @@ function calculate_player_stats(player) {
 				player.items[i] = null;
 				player.citems[i] = null;
 			} else if (G.items[current.name].gain) {
-				var prop = calculate_item_properties(current);
+				var prop = commonFunctions.calculate_item_properties(current);
 				player.stones++;
 				player["x" + G.items[current.name].gain] = prop[G.items[current.name].gain];
 			}
@@ -1181,7 +1182,7 @@ function calculate_player_stats(player) {
 	player.monster_stats = {};
 	if (player.tracker) {
 		for (var name in G.monsters) {
-			var mx = max(
+			var mx = commonFunctions.max(
 				(player.p.stats.monsters[name] || 0) + (player.p.stats.monsters_diff[name] || 0),
 				(player.max_stats.monsters[name] || [0, 0])[0],
 			);
@@ -1198,7 +1199,7 @@ function calculate_player_stats(player) {
 			});
 		}
 	}
-	character_slots.forEach(function (slot) {
+	commonFunctions.character_slots.forEach(function (slot) {
 		var current = player.slots[slot];
 		if (!current) {
 			return;
@@ -1208,7 +1209,7 @@ function calculate_player_stats(player) {
 			console.log("#X Undefined item: " + current.name + " (" + slot + ")");
 			return;
 		}
-		var prop = calculate_item_properties(current, { class: player.type, map: player.map });
+		var prop = commonFunctions.calculate_item_properties(current, { class: player.type, map: player.map });
 		if (prop.class && !prop.class.includes(player.type)) {
 			return;
 		}
@@ -1273,7 +1274,7 @@ function calculate_player_stats(player) {
 	if (player.slots.cape && player.slots.cape.name == "stealthcape") {
 		player.stealth = true;
 	}
-	item_attack = max(item_attack, 5);
+	item_attack = commonFunctions.max(item_attack, 5);
 	if (player.type == "paladin") {
 		player.attack += item_attack * (player.str / 20.0 + player.int / 40.0);
 	} else {
@@ -1284,52 +1285,52 @@ function calculate_player_stats(player) {
 		player.attack *= 1.6;
 	}
 	if (player.type == "warrior") {
-		player.courage += round(player.str / 30);
+		player.courage += commonFunctions.round(player.str / 30);
 	}
 	if (player.type == "priest") {
-		player.mcourage += round(player.int / 30);
+		player.mcourage += commonFunctions.round(player.int / 30);
 	}
 	if (player.type == "paladin") {
-		player.pcourage += round(player.str / 30 + player.int / 30);
+		player.pcourage += commonFunctions.round(player.str / 30 + player.int / 30);
 	}
 	//console.log(player.speed)
-	//player.speed+=player.dex/20.0+player.str/40.0+min(player.level,40)/4.0+max(0,min(player.level-40,20))/5.0+max(0,player.level-60)/7.0
+	//player.speed+=player.dex/20.0+player.str/40.0+commonFunctions.min(player.level,40)/4.0+commonFunctions.max(0,commonFunctions.min(player.level-40,20))/5.0+commonFunctions.max(0,player.level-60)/7.0
 	player.speed +=
-		min(player.dex, 256) / 32.0 +
-		min(player.str, 256) / 64.0 +
-		min(player.level, 40) / 10.0 +
-		max(0, min(player.level - 40, 20)) / 15.0 +
-		max(0, min(86, player.level) - 60) / 16.0;
+		commonFunctions.min(player.dex, 256) / 32.0 +
+		commonFunctions.min(player.str, 256) / 64.0 +
+		commonFunctions.min(player.level, 40) / 10.0 +
+		commonFunctions.max(0, commonFunctions.min(player.level - 40, 20)) / 15.0 +
+		commonFunctions.max(0, commonFunctions.min(86, player.level) - 60) / 16.0;
 
 	player.aggro_diff = player.bling / 100 - player.cuteness / 100;
 
 	//console.log(player.speed)
 	//player.max_hp+=player.str*5+player.vit*player.level/2; //player.str*10.0+player.level*10+player.vit*25
 	player.max_hp += player.str * 21 + player.vit * (48 + player.level / 3.0);
-	player.max_hp = max(1, player.max_hp);
-	player.max_mp = max(1, player.max_mp);
+	player.max_hp = commonFunctions.max(1, player.max_hp);
+	player.max_mp = commonFunctions.max(1, player.max_mp);
 	player.max_mp += player.int * 15.0 + player.level * 5;
 	//player.armor+=player.str/2.0;
-	player.armor += min(player.str, 160) + max(0, player.str - 160) * 0.25;
-	player.resistance += min(player.int, 180) + max(0, player.int - 180) * 0.25;
+	player.armor += commonFunctions.min(player.str, 160) + commonFunctions.max(0, player.str - 160) * 0.25;
+	player.resistance += commonFunctions.min(player.int, 180) + commonFunctions.max(0, player.int - 180) * 0.25;
 	player.frequency +=
-		min(player.level, 80) / 164.0 +
-		min(160, player.dex) / 640.0 +
-		max(player.dex - 160, 0) / 925.0 +
+		commonFunctions.min(player.level, 80) / 164.0 +
+		commonFunctions.min(160, player.dex) / 640.0 +
+		commonFunctions.max(player.dex - 160, 0) / 925.0 +
 		player.int / 1575.0; // 120 635 1275 is the original mix
 	// player.frequency=9000;
 	player.attack_ms = round(1000.0 / player.frequency);
 	if (player.last_attack_ms && player.attack_ms != player.last_attack_ms) {
-		// server_log("skill_timeout_correction: "+player.last_attack_ms+" to "+player.attack_ms+" timeout: "+(player.attack_ms-mssince(player.last.attack)))
+		// server_log("skill_timeout_correction: "+player.last_attack_ms+" to "+player.attack_ms+" timeout: "+(player.attack_ms-commonFunctions.mssince(player.last.attack)))
 		player.socket.emit("skill_timeout", {
 			name: "attack",
-			ms: player.attack_ms - mssince(player.last.attack),
+			ms: player.attack_ms - commonFunctions.mssince(player.last.attack),
 			reason: "attack_ms",
 		});
 	}
 	player.last_attack_ms = player.attack_ms;
 	player.mp_cost +=
-		min(player.level, 80) * (player.mp_cost / 10.0) +
+		commonFunctions.min(player.level, 80) * (player.mp_cost / 10.0) +
 		player.a_mp_cost +
 		player.crit * 1.25 +
 		player.lifesteal * 1.5 +
@@ -1339,7 +1340,7 @@ function calculate_player_stats(player) {
 	} else {
 		player.mp_cost += player.rpiercing / 15.0;
 	}
-	player.mp_cost = max(1, player.mp_cost);
+	player.mp_cost = commonFunctions.max(1, player.mp_cost);
 	if (!player.hp && !player.rip) {
 		player.hp = player.max_hp;
 		player.mp = player.max_mp;
@@ -1351,7 +1352,7 @@ function calculate_player_stats(player) {
 	if (player.type == "priest") {
 		player.heal = player.attack;
 	}
-	player.output = max(5, player.output);
+	player.output = commonFunctions.max(5, player.output);
 	if (player.output) {
 		player.attack = (player.attack * player.output) / 100.0;
 	}
@@ -1363,8 +1364,8 @@ function calculate_player_stats(player) {
 			player[prop] = round(player[prop]);
 		},
 	);
-	player.hp = max(0, min(player.hp, player.max_hp));
-	player.mp = max(0, min(player.mp, player.max_mp));
+	player.hp = commonFunctions.max(0, commonFunctions.min(player.hp, player.max_hp));
+	player.mp = commonFunctions.max(0, commonFunctions.min(player.mp, player.max_mp));
 
 	if (player.party && parties[player.party]) {
 		if (player.party_xp) {
@@ -1387,7 +1388,7 @@ function calculate_player_stats(player) {
 	player.xpm = 1 + player.xxp / 100.0;
 	player.goldm = 1 + player.xgold / 100.0;
 	["luckm", "xpm", "goldm"].forEach(function (p) {
-		player[p] = max(0.01, player[p]);
+		player[p] = commonFunctions.max(0.01, player[p]);
 	});
 
 	if (player.tskin == "konami") {
@@ -1398,7 +1399,7 @@ function calculate_player_stats(player) {
 	}
 
 	if (player.s.invis) {
-		player.speed = max(player.speed * 0.6, player.speed - 25);
+		player.speed = commonFunctions.max(player.speed * 0.6, player.speed - 25);
 		player.attack = round(player.attack * 1.25);
 	}
 	if (player.s.invincible) {
@@ -1418,12 +1419,12 @@ function calculate_player_stats(player) {
 		(player.level > 20 && 0.04) ||
 		0.05;
 
-	var excess = max(
+	var excess = commonFunctions.max(
 		0,
-		max(player.targets_p - player.courage, max(player.targets_m - player.mcourage, player.targets_u - player.pcourage)),
+		commonFunctions.max(player.targets_p - player.courage, commonFunctions.max(player.targets_m - player.mcourage, player.targets_u - player.pcourage)),
 	);
 	var sredux = [0, 20, 40, 70, 80, 90, 100];
-	player.speed -= sredux[min(sredux.length - 1, excess)];
+	player.speed -= sredux[commonFunctions.min(sredux.length - 1, excess)];
 	if (excess > 2) {
 		player.attack = round(player.attack * 0.2);
 	} else if (excess > 1) {
@@ -1440,15 +1441,15 @@ function calculate_player_stats(player) {
 	if (player.p.stand || player.s.hardshell) {
 		player.speed = 10;
 	}
-	player.evasion = min(50, player.evasion);
-	player.reflection = min((player.s.reflection && 50) || 30, player.reflection);
-	player.speed = min(player.speed, player.cruise || 200000);
-	player.speed = round(max(5, player.speed));
+	player.evasion = commonFunctions.min(50, player.evasion);
+	player.reflection = commonFunctions.min((player.s.reflection && 50) || 30, player.reflection);
+	player.speed = commonFunctions.min(player.speed, player.cruise || 200000);
+	player.speed = round(commonFunctions.max(5, player.speed));
 	if (!player.gold && player.gold !== 0) {
 		player.gold = 0;
 		server_log("#X - GOLD BUG calculate", 1);
 	}
-	recalculate_vxy(player);
+	commonFunctions.recalculate_vxy(player);
 	perfc.cps += 1;
 }
 
@@ -1464,7 +1465,7 @@ function calculate_common_stats(entity) {
 		entity.speed = 1;
 	}
 	if (entity.s.tangled) {
-		entity.speed = min(entity.speed, 24);
+		entity.speed = commonFunctions.min(entity.speed, 24);
 	}
 }
 
@@ -1494,13 +1495,13 @@ function calculate_monster_stats(monster) {
 	}
 	monster.attack = round((monster.attack * monster.output) / 100.0);
 	if (monster.focus && instances[monster.in].monsters[monster.focus]) {
-		monster.speed = min(monster.speed, instances[monster.in].monsters[monster.focus].speed + 4);
+		monster.speed = commonFunctions.min(monster.speed, instances[monster.in].monsters[monster.focus].speed + 4);
 	}
 	if (monster.level > 1) {
 		var att_mult = 0.125;
 		var freq_mult = 0.034;
 		var speed_mult = 0.24; // speed originally 0.34
-		var mlevel = min(monster.level, 12);
+		var mlevel = commonFunctions.min(monster.level, 12);
 		if (monster.map_def.grow) {
 			att_mult = 0.05;
 			freq_mult = 0.008;
@@ -1511,10 +1512,10 @@ function calculate_monster_stats(monster) {
 		monster.frequency += mlevel * freq_mult;
 	}
 	if (E.schedule.night) {
-		monster.speed = ceil(monster.speed * 0.7);
+		monster.speed = commonFunctions.ceil(monster.speed * 0.7);
 	}
 	calculate_common_stats(monster);
-	recalculate_vxy(monster);
+	commonFunctions.recalculate_vxy(monster);
 }
 
 function ccms(monster) {
@@ -1538,7 +1539,7 @@ function can_equip_item(player, item, slot) {
 		return slot;
 	}
 	if (
-		!in_arr(item.type, [
+		!commonFunctions.in_arr(item.type, [
 			"helmet",
 			"pants",
 			"chest",
@@ -1560,10 +1561,10 @@ function can_equip_item(player, item, slot) {
 	) {
 		return "no";
 	}
-	if (slot != item.type && in_arr(item.type, ["shield", "source", "quiver", "misc_offhand"]) && slot != "offhand") {
+	if (slot != item.type && commonFunctions.in_arr(item.type, ["shield", "source", "quiver", "misc_offhand"]) && slot != "offhand") {
 		return "no";
 	}
-	if (in_arr(slot, ["weapon", "mainhand", "offhand", "tool"])) {
+	if (commonFunctions.in_arr(slot, ["weapon", "mainhand", "offhand", "tool"])) {
 		if (
 			slot == "weapon" &&
 			player.slots.mainhand &&
@@ -1719,7 +1720,7 @@ function add_item(player, new_item, args) {
 	if (G.items[new_item.name].s) {
 		for (var i = 0; i < player.items.length; i++) {
 			var item = player.items[i];
-			if (can_stack(item, new_item)) {
+			if (commonFunctions.can_stack(item, new_item)) {
 				if ((args.v && is_in_pvp(player, 1)) || new_item.v) {
 					item.v = new Date();
 				}
@@ -1764,7 +1765,7 @@ function add_item(player, new_item, args) {
 		player.s.mluck &&
 		get_player(player.s.mluck.f) &&
 		Math.random() <= 0.02 &&
-		can_add_item(get_player(player.s.mluck.f), new_item.name)
+		commonFunctions.can_add_item(get_player(player.s.mluck.f), new_item.name)
 	) {
 		var mr = get_player(player.s.mluck.f);
 		var item = create_new_item(new_item.name);
@@ -1812,13 +1813,13 @@ function list_to_pseudo_items(list, type, add) {
 		list.forEach(function (el) {
 			if (G.items[el[1]].s) {
 				if (ex[el[1]]) {
-					ex[el[1]].q += max(1, el[0]);
+					ex[el[1]].q += commonFunctions.max(1, el[0]);
 				} else {
-					ex[el[1]] = { name: el[1], q: max(1, el[0]) };
+					ex[el[1]] = { name: el[1], q: commonFunctions.max(1, el[0]) };
 					items.push(ex[el[1]]);
 				}
 			} else {
-				items.push({ name: el[1], q: max(1, el[0]) });
+				items.push({ name: el[1], q: commonFunctions.max(1, el[0]) });
 			}
 		});
 	} else if (type == "chest") {
@@ -1848,7 +1849,7 @@ function bank_add_item(player, slot, new_item) {
 	if (new_item.q) {
 		for (var i = 0; i < player.user[slot].length; i++) {
 			var item = player.user[slot][i];
-			if (can_stack(item, new_item)) {
+			if (commonFunctions.can_stack(item, new_item)) {
 				item.q = (item.q || 1) + (new_item.q || 1);
 				player.cuser[slot][i] = cache_item(player.user[slot][i]);
 				return i;
@@ -1879,7 +1880,7 @@ function drop_item_logic(drop, def, pvp) {
 			item.v = new Date();
 		}
 		for (var i = 0; i < drop.items.length; i++) {
-			if (can_stack(drop.items[i], item)) {
+			if (commonFunctions.can_stack(drop.items[i], item)) {
 				drop.items[i].q += def[2];
 				added = true;
 				break;
@@ -1896,7 +1897,7 @@ function drop_item_logic(drop, def, pvp) {
 			item.v = new Date();
 		}
 		for (var i = 0; i < drop.items.length; i++) {
-			if (can_stack(drop.items[i], item)) {
+			if (commonFunctions.can_stack(drop.items[i], item)) {
 				drop.items[i].q += 1;
 				added = true;
 				break;
@@ -1912,14 +1913,14 @@ function drop_one_thing(player, items, args) {
 	if (!args) {
 		args = {};
 	}
-	var drop_id = randomStr(30);
+	var drop_id = commonFunctions.randomStr(30);
 	var chest = args.chest || "chest1";
-	if (!is_array(items)) {
+	if (!commonFunctions.is_array(items)) {
 		items = [items];
 	}
 	drop = chests[drop_id] = { items: [], cash: 0 };
 	for (var i = 0; i < items.length; i++) {
-		if (is_string(items[i])) {
+		if (commonFunctions.is_string(items[i])) {
 			drop_item_logic(drop, [1, items[i]], is_in_pvp(player, 1));
 		}
 	}
@@ -1946,7 +1947,7 @@ function drop_something(player, monster, share) {
 	achievement_logic_monster_kill(player, monster);
 	share = (share === undefined && 1) || share || 0;
 	// console.log("share: "+share);
-	var drop_id = randomStr(30);
+	var drop_id = commonFunctions.randomStr(30);
 	var drop;
 	var chest = "chest3";
 	var hp_mult = 1;
@@ -1967,12 +1968,12 @@ function drop_something(player, monster, share) {
 			monster.level *
 			monster.mult || 0; // previously 0.75
 	if (monster.extra_gold) {
-		drop.egold = (drop.egold || 0) + max(0, monster.extra_gold);
+		drop.egold = (drop.egold || 0) + commonFunctions.max(0, monster.extra_gold);
 	}
 	if (monster.outgoing) {
 		drop.egold =
 			(drop.egold || 0) +
-			min(
+			commonFunctions.min(
 				monster.outgoing * B.m_outgoing_gmult,
 				G.monsters[monster.type].hp * 0.048 * (gameplay == "hardcore" ? 50 : 1),
 			);
@@ -2124,7 +2125,7 @@ function drop_something(player, monster, share) {
 }
 
 function drop_something_hardcore(player, target) {
-	var drop_id = randomStr(30);
+	var drop_id = commonFunctions.randomStr(30);
 	var drop;
 	drop = chests[drop_id] = { items: [], pvp_items: [], cash: 0 };
 	drop.gold = 99;
@@ -2202,7 +2203,7 @@ function drop_something_hardcore(player, target) {
 }
 
 function drop_something_pvp(player, target) {
-	var drop_id = randomStr(30);
+	var drop_id = commonFunctions.randomStr(30);
 	var drop;
 	drop = chests[drop_id] = { items: [], pvp_items: [], cash: 0, pvp: true };
 	drop.gold = 0;
@@ -2298,7 +2299,7 @@ function monster_hunt_logic(player, monster) {
 }
 
 function calculate_monster_score(player, monster, share) {
-	var score = min(1, monster.mult * 2.2);
+	var score = commonFunctions.min(1, monster.mult * 2.2);
 	var divider = 1;
 	if (!share) {
 		share = 0;
@@ -2311,20 +2312,20 @@ function calculate_monster_score(player, monster, share) {
 		if (current.id == player.id) {
 			continue;
 		}
-		if (current.owner == player.owner && current.type == "merchant" && simple_distance(current, player) < 600) {
+		if (current.owner == player.owner && current.type == "merchant" && commonFunctions.simple_distance(current, player) < 600) {
 			score -= 0.2 / divider;
 		}
 		if (
 			current.party &&
 			current.party == player.party &&
 			current.type == "merchant" &&
-			simple_distance(current, player) < 600
+			commonFunctions.simple_distance(current, player) < 600
 		) {
 			score -= 0.1 / divider;
 		} else if (
 			current.owner == player.owner &&
 			current.party == player.party &&
-			simple_distance(current, player) < 600 &&
+			commonFunctions.simple_distance(current, player) < 600 &&
 			current.type != "merchant"
 		) {
 			score += 0.3 / divider;
@@ -2337,7 +2338,7 @@ function calculate_monster_score(player, monster, share) {
 			score += 0.3 / divider;
 		} // originally 0.25
 	}
-	if (simple_distance(player, monster) > 600 && share < 0.01) {
+	if (commonFunctions.simple_distance(player, monster) > 600 && share < 0.01) {
 		score -= 0.3 / divider;
 	}
 	if (player.type == "merchant" && player.party) {
@@ -2358,12 +2359,12 @@ function issue_monster_awards(monster) {
 		var current = players[name_to_id[name]];
 		if (current) {
 			//  && current.map==monster.map
-			total += max(0, monster.points[name]);
+			total += commonFunctions.max(0, monster.points[name]);
 		}
 	}
 	for (var name in monster.points) {
 		var current = players[name_to_id[name]];
-		var share = max(0, monster.points[name]) / total;
+		var share = commonFunctions.max(0, monster.points[name]) / total;
 		if (current && share > 0.0025) {
 			//  && current.map==monster.map
 			if (monster.rbuff && G.conditions[monster.rbuff]) {
@@ -2511,7 +2512,7 @@ function pwn_routine(victor, target) {
 	rip(target);
 	instance_emit(target.in, "server_message", {
 		message: victor.name + " pwned " + target.name,
-		color: (victor.team && colors[victor.team]) || "gray",
+		color: (victor.team && commonFunctions.colors[victor.team]) || "gray",
 	});
 	if (target.map == "arena") {
 		xy_emit(npcs.pvp, "chat_log", { owner: npcs.pvp.name, message: victor.name + " pwned " + target.name, id: "pvp" });
@@ -2534,7 +2535,7 @@ function issue_player_award(attacker, target) {
 		}
 		return;
 	}
-	var lost_xp = floor(min(max((target.max_xp * 0.01) / 10, (target.xp * 0.02) / 10), target.xp));
+	var lost_xp = commonFunctions.floor(commonFunctions.min(commonFunctions.max((target.max_xp * 0.01) / 10, (target.xp * 0.02) / 10), target.xp));
 
 	var lost_gold = 100;
 	var gain_gold = 100;
@@ -2569,8 +2570,8 @@ function issue_player_award(attacker, target) {
 		lost_gold = 1000000;
 	}
 
-	lost_gold = min(lost_gold, max(attacker.gold, 10000) * 4) || 0;
-	lost_xp = round(min(lost_xp, max(attacker.xp / 15.0, 50000))) || 0;
+	lost_gold = commonFunctions.min(lost_gold, commonFunctions.max(attacker.gold, 10000) * 4) || 0;
+	lost_xp = round(commonFunctions.min(lost_xp, commonFunctions.max(attacker.xp / 15.0, 50000))) || 0;
 
 	if (G.maps[attacker.map].safe_pvp && !is_pvp) {
 		lost_gold = 0;
@@ -2585,10 +2586,10 @@ function issue_player_award(attacker, target) {
 				lost_xp += G.levels[target.level - i + ""];
 			}
 		}
-		target.level = max(1, target.level - B.hlevel_loss);
+		target.level = commonFunctions.max(1, target.level - B.hlevel_loss);
 	}
 
-	lost_gold = min(target.gold, lost_gold);
+	lost_gold = commonFunctions.min(target.gold, lost_gold);
 	gain_gold = round(lost_gold * 0.9);
 
 	if (target.type == "merchant") {
@@ -2615,7 +2616,7 @@ function issue_player_award(attacker, target) {
 		for (var i = 0; i < target.isize; i++) {
 			if (target.items[i] && target.items[i].name == "xptome") {
 				lost_shells = 2;
-				lost_xp = floor(lost_xp / 50);
+				lost_xp = commonFunctions.floor(lost_xp / 50);
 				consume_one(target, i);
 				target.to_reopen = true;
 				target.socket.emit("game_log", { message: "A tome fades away", color: "#B5C09C" });
@@ -2629,13 +2630,13 @@ function issue_player_award(attacker, target) {
 	if (target.xp < 0) {
 		target.xp = 0;
 	}
-	target.socket.emit("game_log", "Lost " + to_pretty_num(lost_gold) + " gold");
-	target.socket.emit("game_log", "Lost " + to_pretty_num(lost_xp) + " experience");
+	target.socket.emit("game_log", "Lost " + commonFunctions.to_pretty_num(lost_gold) + " gold");
+	target.socket.emit("game_log", "Lost " + commonFunctions.to_pretty_num(lost_xp) + " experience");
 	target.socket.emit("disappearing_text", {
 		message: "-" + lost_xp,
 		x: target.x,
 		y: target.y - 30,
-		args: { color: colors.party_xp },
+		args: { color: commonFunctions.colors.party_xp },
 	});
 
 	if (gameplay == "hardcore") {
@@ -2652,31 +2653,30 @@ function issue_player_award(attacker, target) {
 		attacker.gold += gain_gold;
 		attacker.xp += round(lost_xp * 0.95);
 		attacker.socket.emit("game_log", { message: "Pwned " + target.name, color: "#67C051" });
-		attacker.socket.emit("game_log", "Looted " + to_pretty_num(gain_gold) + " gold");
+		attacker.socket.emit("game_log", "Looted " + commonFunctions.to_pretty_num(gain_gold) + " gold");
 		attacker.socket.emit("disappearing_text", {
 			message: "+" + gain_gold,
 			x: target.x,
 			y: target.y - 40,
 			args: { color: "+gold", size: "large" },
 		});
-		attacker.socket.emit("game_log", "Gained " + to_pretty_num(round(lost_xp * 0.95)) + " experience");
+		attacker.socket.emit("game_log", "Gained " + commonFunctions.to_pretty_num(round(lost_xp * 0.95)) + " experience");
 		attacker.socket.emit("disappearing_text", {
 			message: "+" + lost_xp,
 			x: target.x,
 			y: target.y - 30,
-			args: { color: colors.party_xp },
+			args: { color: commonFunctions.colors.party_xp },
 		});
 		if (lost_shells) {
 			add_shells(attacker, lost_shells, "xptome");
 		}
 	} else {
 		var name = attacker.name;
-		lost_xp = floor((lost_xp * 0.92) / parties[attacker.party].length);
-		gain_gold = floor(gain_gold / parties[attacker.party].length);
+		lost_xp = commonFunctions.floor((lost_xp * 0.92) / parties[attacker.party].length);
+		gain_gold = commonFunctions.floor(gain_gold / parties[attacker.party].length);
 		if (lost_shells) {
 			add_shells(attacker, lost_shells, "xptome");
 		}
-		// ,lost_shells=ceil(lost_shells/parties[attacker.party].length)
 		parties[attacker.party].forEach(function (a_name) {
 			var attacker = players[name_to_id[a_name]];
 			attacker.gold += gain_gold;
@@ -2684,7 +2684,7 @@ function issue_player_award(attacker, target) {
 				attacker.xp += lost_xp;
 			}
 			attacker.socket.emit("game_log", { message: name + " pwned " + target.name, color: "#67C051" });
-			attacker.socket.emit("game_log", "Looted " + to_pretty_num(gain_gold) + " gold");
+			attacker.socket.emit("game_log", "Looted " + commonFunctions.to_pretty_num(gain_gold) + " gold");
 			attacker.socket.emit("disappearing_text", {
 				message: "+" + gain_gold,
 				x: target.x,
@@ -2692,12 +2692,12 @@ function issue_player_award(attacker, target) {
 				args: { color: "+gold", size: "large" },
 			});
 			if (attacker.type != "merchant") {
-				attacker.socket.emit("game_log", "Gained " + to_pretty_num(lost_xp) + " experience");
+				attacker.socket.emit("game_log", "Gained " + commonFunctions.to_pretty_num(lost_xp) + " experience");
 				attacker.socket.emit("disappearing_text", {
 					message: "+" + lost_xp,
 					x: target.x,
 					y: target.y - 30,
-					args: { color: colors.party_xp },
+					args: { color: commonFunctions.colors.party_xp },
 				});
 			}
 		});
@@ -2741,13 +2741,13 @@ function commence_attack(attacker, target, atype) {
 		attacker.is_player &&
 		target.is_player &&
 		!info.positive &&
-		abs(attacker.level - target.level) > 10
+		commonFunctions.abs(attacker.level - target.level) > 10
 	) {
 		attacker.socket.emit("game_response", { response: "attack_failed", id: target.id, reason: "level" });
 		return { failed: true, reason: "level_gap", place: atype, id: target.id };
 	}
 
-	var dist = distance(attacker, target);
+	var dist = commonFunctions.distance(attacker, target);
 	var def = { hid: attacker.id, source: atype, projectile: null };
 
 	// PROJECTILE LOGIC
@@ -2933,7 +2933,7 @@ function commence_attack(attacker, target, atype) {
 		if (attacker.s.poisonous) {
 			info.conditions.push("poisoned");
 		}
-		attacker.last.attack = future_ms(rng);
+		attacker.last.attack = commonFunctions.future_ms(rng);
 	}
 
 	if (atype != "attack" && target.immune && (!G.skills[atype] || !G.skills[atype].pierces_immunity)) {
@@ -2954,7 +2954,7 @@ function commence_attack(attacker, target, atype) {
 		return { failed: true, reason: "friendly", place: atype, id: target.id };
 	}
 
-	direction_logic(attacker, target);
+	commonFunctions.direction_logic(attacker, target);
 
 	if (mp_cost && attacker.first && !attacker.is_npc) {
 		consume_mp(attacker, mp_cost, atype != "attack" && atype != "heal" && target);
@@ -2970,8 +2970,8 @@ function commence_attack(attacker, target, atype) {
 		step_out_of_invis(attacker);
 		if (attacker.type == "merchant") {
 			var gold = parseInt(attack * 2);
-			attack = parseInt(min(attack, attacker.gold / 2));
-			attacker.gold = max(0, attacker.gold - gold);
+			attack = parseInt(commonFunctions.min(attack, attacker.gold / 2));
+			attacker.gold = commonFunctions.max(0, attacker.gold - gold);
 			attacker.to_resend += "+reopen";
 		}
 	}
@@ -3010,7 +3010,7 @@ function commence_attack(attacker, target, atype) {
 		info.conditions.push("stunned");
 	}
 
-	var pid = randomStr(6);
+	var pid = commonFunctions.randomStr(6);
 	info.first_attack = info.attack = attack;
 	info.def = def;
 	def.damage_type = info.damage_type;
@@ -3038,7 +3038,7 @@ function commence_attack(attacker, target, atype) {
 			var dampened = false;
 			for (var id in instances[target.in].monsters) {
 				var m = instances[target.in].monsters[id];
-				if (m.type == "fieldgen0" && point_distance(target.x, target.y, m.x, m.y) < 300) {
+				if (m.type == "fieldgen0" && commonFunctions.point_distance(target.x, target.y, m.x, m.y) < 300) {
 					target.s.dampened = { ms: 2000 };
 					add_condition(target, "dampened", { ms: 2000 });
 					dampened = true;
@@ -3056,7 +3056,7 @@ function commence_attack(attacker, target, atype) {
 		action.instant = true;
 	}
 
-	info.eta = future_ms(action.eta);
+	info.eta = commonFunctions.future_ms(action.eta);
 
 	if (info.heal) {
 		action.heal = attack;
@@ -3123,7 +3123,7 @@ function complete_attack(attacker, target, info) {
 		}
 	}
 	if (attacker.is_monster && attack > 0 && !info.heal) {
-		attacker.outgoing += min(target.hp, attack);
+		attacker.outgoing += commonFunctions.min(target.hp, attack);
 	}
 
 	if (
@@ -3133,17 +3133,16 @@ function complete_attack(attacker, target, info) {
 		!info.heal &&
 		attacker != target
 	) {
-		var pid = randomStr(6);
+		var pid = commonFunctions.randomStr(6);
 		var eta = 0;
 		var opid = info.action.pid;
-		// info.attack=ceil(attack*damage_multiplier(attacker.resistance||0))||1;
-		info.attack = ceil(attack * (0.9 + ((attack && Math.random() * 0.2) || 0))); // A pure reflection was requested [29/03/22]
+		info.attack = commonFunctions.ceil(attack * (0.9 + ((attack && Math.random() * 0.2) || 0))); // A pure reflection was requested [29/03/22]
 		if (!info.action.instant) {
-			eta = (1000 * distance(target, attacker, true)) / G.projectiles[info.action.projectile].speed;
+			eta = (1000 * commonFunctions.distance(target, attacker, true)) / G.projectiles[info.action.projectile].speed;
 		}
 		info.target = attacker;
 		info.attacker = target;
-		info.eta = future_ms(eta);
+		info.eta = commonFunctions.future_ms(eta);
 		projectiles[pid] = info;
 		info.action.pid = pid;
 		info.action.target = attacker.id;
@@ -3195,7 +3194,7 @@ function complete_attack(attacker, target, info) {
 		);
 	} else if (
 		target.m != info.action.m ||
-		point_distance(target.x, target.y, info.action.x, info.action.y) > 72 * ((info.heal && 1.5) || 1)
+		commonFunctions.point_distance(target.x, target.y, info.action.x, info.action.y) > 72 * ((info.heal && 1.5) || 1)
 	) {
 		return xy_emit(
 			info.action,
@@ -3220,7 +3219,7 @@ function complete_attack(attacker, target, info) {
 		combo = 0;
 	}
 	if (combo && target.targets > 3) {
-		if (!target.last_combo || ssince(target.last_combo) > 5) {
+		if (!target.last_combo || commonFunctions.ssince(target.last_combo) > 5) {
 			target.combo = 1;
 		}
 		combo += target.combo;
@@ -3259,7 +3258,7 @@ function complete_attack(attacker, target, info) {
 					continue;
 				} //is_same(attacker,ntarget,1)
 				targets.push([ntarget, "stack"]);
-				if (!ntarget.last_combo || ssince(ntarget.last_combo) > 5) {
+				if (!ntarget.last_combo || commonFunctions.ssince(ntarget.last_combo) > 5) {
 					ntarget.combo = 1;
 				}
 				combo += ntarget.combo;
@@ -3280,7 +3279,7 @@ function complete_attack(attacker, target, info) {
 	} else if (combo > 1) {
 		combo_m = [1, 1.6, 1.62, 1.64, 1.7, 1.72, 1.75, 1.8, 1.9, 2, 2, 2, 2][combo];
 	}
-	combo_m = min(combo_m, max(300 / attack, 1.2)); // previously 2.4
+	combo_m = commonFunctions.min(combo_m, commonFunctions.max(300 / attack, 1.2)); // previously 2.4
 
 	if (
 		!info.positive &&
@@ -3299,15 +3298,15 @@ function complete_attack(attacker, target, info) {
 				if (target.npc) {
 					continue;
 				}
-				if (target.id != otarget.id && distance(target, otarget) < radius) {
-					targets.push([target, "splash", (damage_multiplier(target[defense] || 0) * intensity) / 100.0]);
+				if (target.id != otarget.id && commonFunctions.distance(target, otarget) < radius) {
+					targets.push([target, "splash", (commonFunctions.damage_multiplier(target[defense] || 0) * intensity) / 100.0]);
 				}
 			}
 		}
 		if (attacker.is_player) {
 			for (var id in instances[target.in].monsters) {
 				var target = instances[target.in].monsters[id];
-				if (target.id != otarget.id && distance(target, otarget) < radius) {
+				if (target.id != otarget.id && commonFunctions.distance(target, otarget) < radius) {
 					if (target.avoidance && Math.random() * 100 < target.avoidance) {
 						xy_emit(
 							info.action,
@@ -3317,7 +3316,7 @@ function complete_attack(attacker, target, info) {
 						);
 						continue;
 					}
-					targets.push([target, "splash", (damage_multiplier(target[defense] || 0) * intensity) / 100.0]);
+					targets.push([target, "splash", (commonFunctions.damage_multiplier(target[defense] || 0) * intensity) / 100.0]);
 				}
 			}
 		}
@@ -3341,7 +3340,7 @@ function complete_attack(attacker, target, info) {
 
 		if (info.heal) {
 			if (first) {
-				o_attack = attack = -ceil(
+				o_attack = attack = -commonFunctions.ceil(
 					B.heal_multiplier *
 						attack *
 						(0.9 + Math.random() * 0.2) *
@@ -3377,7 +3376,7 @@ function complete_attack(attacker, target, info) {
 				if (attacker.type == "rogue") {
 					var maxd = G.skills.stack.max;
 					// if(G.monsters[target.type] && G.monsters[target.type].stationary) maxd=9999999999;
-					target.s.stack = { ms: 10000, s: min(maxd, (target.s.stack && target.s.stack.s + 1) || 1) };
+					target.s.stack = { ms: 10000, s: commonFunctions.min(maxd, (target.s.stack && target.s.stack.s + 1) || 1) };
 					attack += target.s.stack.s;
 				}
 				if (def.purify) {
@@ -3400,9 +3399,9 @@ function complete_attack(attacker, target, info) {
 				if (attacker.is_player && target["for"]) {
 					dmg_mult = damage_multiplier(target["for"] * 5);
 				}
-				i_attack = attack = ceil(combo_m * attack * (0.9 + ((attack && Math.random() * 0.2) || 0)));
+				i_attack = attack = commonFunctions.ceil(combo_m * attack * (0.9 + ((attack && Math.random() * 0.2) || 0)));
 				attack =
-					ceil(
+				commonFunctions.ceil(
 						attack * dmg_mult * damage_multiplier((target[defense] || 0) - (attacker[pierce] || 0) - info.apiercing),
 					) || 0;
 
@@ -3420,7 +3419,7 @@ function complete_attack(attacker, target, info) {
 					attack = 0;
 				}
 
-				o_attack = attack = ceil(attack);
+				o_attack = attack = commonFunctions.ceil(attack);
 
 				if (info.conditions.includes("frozen") && !target.immune && target.hp > attack) {
 					add_condition(target, "frozen");
@@ -3467,7 +3466,7 @@ function complete_attack(attacker, target, info) {
 					disappearing_text(target.socket, target, "SNEAK!", { xy: 1, size: "huge", color: "sneak", nv: 1 });
 				}
 				if (info.damage_type == "pure") {
-					attack = ceil(info.first_attack);
+					attack = commonFunctions.ceil(info.first_attack);
 				}
 				if (target["1hp"]) {
 					attack = (def.crit && 2) || 1;
@@ -3475,7 +3474,7 @@ function complete_attack(attacker, target, info) {
 			} else {
 				attack = o_attack;
 				if (target_def[1] == "splash") {
-					attack = ceil(attack * target_def[2]);
+					attack = commonFunctions.ceil(attack * target_def[2]);
 				}
 				if (target["1hp"]) {
 					def.damage = o_attack = attack = 1;
@@ -3493,23 +3492,23 @@ function complete_attack(attacker, target, info) {
 
 			def.damage = attack;
 			if (info.lifesteal) {
-				var hp = ceil((min(attack, target.hp) * info.lifesteal) / 100.0);
-				attacker.hp = min(attacker.max_hp, attacker.hp + hp);
+				var hp = commonFunctions.ceil((commonFunctions.min(attack, target.hp) * info.lifesteal) / 100.0);
+				attacker.hp = commonFunctions.min(attacker.max_hp, attacker.hp + hp);
 				change = true;
 				if (hp) {
 					def.lifesteal = hp;
 				}
 			}
 			if (info.manasteal) {
-				var mp = ceil((min(attack, target.hp) * info.manasteal) / 100.0);
+				var mp = commonFunctions.ceil((commonFunctions.min(attack, target.hp) * info.manasteal) / 100.0);
 				if (target.mp !== undefined) {
-					mp = min(target.mp, mp);
-					target.mp = max(0, target.mp - mp);
+					mp = commonFunctions.min(target.mp, mp);
+					target.mp = commonFunctions.max(0, target.mp - mp);
 				} else {
 					mp = 0;
 				}
 				if (attacker.mp !== undefined) {
-					attacker.mp = min(attacker.max_mp || 0, attacker.mp + mp);
+					attacker.mp = commonFunctions.min(attacker.max_mp || 0, attacker.mp + mp);
 					change = true;
 				}
 				if (mp) {
@@ -3517,9 +3516,9 @@ function complete_attack(attacker, target, info) {
 				}
 			}
 			if (G.monsters[attacker.type] && G.monsters[attacker.type].goldsteal && target.gold) {
-				//var gold=min(target.gold,parseInt(ceil(target.level*target.level/10)));
+
 				var gold = parseInt(Math.random() * 12) + 1;
-				target.gold = max(0, target.gold - gold);
+				target.gold = commonFunctions.max(0, target.gold - gold);
 				attacker.extra_gold = (attacker.extra_gold || 0) + gold;
 				def.goldsteal = gold;
 			}
@@ -3527,7 +3526,7 @@ function complete_attack(attacker, target, info) {
 
 		var original = target.hp;
 		if (target.s.mshield && target.mp > 200 && attack > 0) {
-			// console.log("HERE MPSHIELD!")
+
 			var max_mp = target.mp - 200;
 			var damage_per_mp = 1.5;
 			if (target.level > 99) {
@@ -3539,7 +3538,7 @@ function complete_attack(attacker, target, info) {
 			} else if (target.level > 69) {
 				damage_per_mp = 1.75;
 			}
-			var max_hp = ceil(max_mp * damage_per_mp);
+			var max_hp = commonFunctions.ceil(max_mp * damage_per_mp);
 			if (max_hp < attack) {
 				def.mp_damage = max_mp;
 				attack -= max_hp;
@@ -3551,8 +3550,8 @@ function complete_attack(attacker, target, info) {
 			}
 			change = true;
 		}
-		target.hp = min(target.hp - attack, target.max_hp); // both for damage and heal
-		var net = original - max(0, target.hp);
+		target.hp = commonFunctions.min(target.hp - attack, target.max_hp); // both for damage and heal
+		var net = original - commonFunctions.max(0, target.hp);
 		if (target.hp <= 0) {
 			def.kill = true;
 			if (G.skills[atype].kill_buff) {
@@ -3569,15 +3568,13 @@ function complete_attack(attacker, target, info) {
 			!attacker["1hp"]
 		) {
 			// dreturn happens at every hit
-			def.dreturn = ceil((i_attack * target.dreturn) / 100.0);
+			def.dreturn = commonFunctions.ceil((i_attack * target.dreturn) / 100.0);
 			if (attacker.is_monster) {
 				attacker.u = true;
 				attacker.cid++;
 			}
-			attacker.hp = max(attacker.hp - def.dreturn, 0);
+			attacker.hp = commonFunctions.max(attacker.hp - def.dreturn, 0);
 		}
-
-		// if(target.is_player && net>0) target.s.damage_received={amount:target.s.damage_received&&(target.s.damage_received.amount+net)||net,ms:10000};
 
 		if (attacker.is_player) {
 			if (net > 0) {
@@ -3644,7 +3641,7 @@ function complete_attack(attacker, target, info) {
 				achievement_logic_monster_last_hit(attacker, target);
 				kill_monster(attacker, target);
 			} else {
-				if (target.a.warp_on_hit && Math.random() < target.a.warp_on_hit.attr0 && !is_disabled(target)) {
+				if (target.a.warp_on_hit && Math.random() < target.a.warp_on_hit.attr0 && !commonFunctions.is_disabled(target)) {
 					var point = random_place(target.map);
 					transport_monster_to(target, target.in, target.map, point.x, point.y);
 				}
@@ -3740,7 +3737,7 @@ function target_player(monster, player, no_increase) {
 	}
 	delete monster.s.sleeping;
 	monster.last.attacked = new Date();
-	monster.last_level = future_s(Math.random() * 100 - 50);
+	monster.last_level = commonFunctions.future_s(Math.random() * 100 - 50);
 	monster.ex = monster.x;
 	monster.ey = monster.y;
 	monster.moving = false;
@@ -3798,20 +3795,15 @@ function resend(player, events) {
 	}
 	events = (events && events.split && events.split("+")) || [];
 	delete player.to_resend;
-	if (in_arr("u", events)) {
+	if (commonFunctions.in_arr("u", events)) {
 		add_call_cost(call_modifier);
 		player.u = true;
 	}
-	if (in_arr("cid", events)) {
+	if (commonFunctions.in_arr("cid", events)) {
 		player.cid++;
 	}
-	// if(in_arr("inv",events)) no longer needed as both add_item and consume has .esize updates [18/10/18]
-	// {
-	// 	player.esize=0;
-	// 	for(var i=0;i<player.items.length;i++) if(!player.items[i]) player.esize++;
-	// 	player.esize+=player.isize-player.items.length;
-	// }
-	if (!in_arr("nc", events)) {
+
+	if (!commonFunctions.in_arr("nc", events)) {
 		add_call_cost(call_modifier);
 		calculate_player_stats(player);
 	}
@@ -3820,7 +3812,7 @@ function resend(player, events) {
 		data.hitchhikers = player.hitchhikers;
 		player.hitchhikers = [];
 	}
-	if (in_arr("reopen", events) || player.to_reopen) {
+	if (commonFunctions.in_arr("reopen", events) || player.to_reopen) {
 		if (current_socket != player.socket) {
 			add_call_cost(call_modifier * 4);
 		}
@@ -3911,7 +3903,7 @@ function transport_player_to(player, name, point, effect) {
 	}
 
 	player.m++;
-	if (is_array(point)) {
+	if (commonFunctions.is_array(point)) {
 		player.x = point[0];
 		player.y = point[1];
 		direction = point[2] || 0;
@@ -3941,7 +3933,7 @@ function transport_player_to(player, name, point, effect) {
 				}
 				player.tp = false;
 			} catch (e) {
-				log_trace("#X Critical-tp", e);
+				commonFunctions.log_trace("#X Critical-tp", e);
 			}
 		}, 500);
 	}
@@ -3952,22 +3944,22 @@ function transport_player_to(player, name, point, effect) {
 	calculate_player_stats(player);
 	pmap_add(player);
 	add_call_cost(player, 8, "transport"); // New - to offset send_all_xy [26/01/20]
-	if (0 && !effect && mssince(player.last.transport) > 6000) {
-		var ms = max(0, -mssince(player.last.attack)) + 3200;
+	if (0 && !effect && commonFunctions.mssince(player.last.transport) > 6000) {
+		var ms = commonFunctions.max(0, -commonFunctions.mssince(player.last.attack)) + 3200;
 		var EV = "";
 		EV = "skill_timeout('attack'," + ms + "); ";
-		player.last.attack = future_ms(ms);
+		player.last.attack = commonFunctions.future_ms(ms);
 		for (var i in player.last) {
-			if (G.skills[i] && player.last[i] > future_ms(-3000)) {
-				player.last[i] = future_ms(3200);
+			if (G.skills[i] && player.last[i] > commonFunctions.future_ms(-3000)) {
+				player.last[i] = commonFunctions.future_ms(3200);
 				EV += "skill_timeout('" + i + "'," + (3200 + (G.skills[i].cooldown || 0)) + "); ";
 			}
 		}
 	}
 	if (effect) {
-		player.s.penalty_cd = { ms: min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 812, 120000) };
+		player.s.penalty_cd = { ms: commonFunctions.min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 812, 120000) };
 	} else {
-		player.s.penalty_cd = { ms: min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 3200, 120000) };
+		player.s.penalty_cd = { ms: commonFunctions.min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 3200, 120000) };
 	}
 	player.socket.emit("new_map", {
 		name: instance.map,
@@ -3994,9 +3986,9 @@ function add_shells(player, amount, reason, announce, override) {
 		phrase = "Earned";
 	}
 	player.cash += amount;
-	player.socket.emit("game_log", { message: phrase + " " + to_pretty_num(amount) + " SHELLS", color: "green" });
-	disappearing_text(player.socket, player, "+" + to_pretty_num(amount), {
-		color: colors.cash,
+	player.socket.emit("game_log", { message: phrase + " " + commonFunctions.to_pretty_num(amount) + " SHELLS", color: "green" });
+	disappearing_text(player.socket, player, "+" + commonFunctions.to_pretty_num(amount), {
+		color: commonFunctions.colors.cash,
 		xy: 1,
 		s: "cash",
 		size: "huge",
@@ -4014,7 +4006,7 @@ function add_shells(player, amount, reason, announce, override) {
 	);
 	if (announce) {
 		broadcast("server_message", {
-			message: player.name + " found " + to_pretty_num(amount) + " shells",
+			message: player.name + " found " + commonFunctions.to_pretty_num(amount) + " shells",
 			color: "#85C76B",
 			type: "server_found",
 			shells: amount,
@@ -4137,7 +4129,7 @@ function init_io() {
 					try {
 						var climit = limits.calls;
 						add_call_cost(16);
-						log_trace("socket.on: " + method.substr(0, 200), e);
+						commonFunctions.log_trace("socket.on: " + method.substr(0, 200), e);
 						if (get_call_cost() > climit) {
 							server_log(">>> LIMITDC2 " + name, 1);
 							socket.emit("limitdcreport", {
@@ -4154,7 +4146,7 @@ function init_io() {
 							} catch (e) {}
 						}
 					} catch (e) {
-						log_trace("limit_calls", e);
+						commonFunctions.log_trace("limit_calls", e);
 					}
 				}
 				current_socket = false_socket;
@@ -4225,9 +4217,9 @@ function init_io() {
 			if (socket.player) {
 				observer.player = socket.player;
 			}
-			// observer.vision[0]=min(1000,observer.vision[0]); observer.vision[1]=min(700,observer.vision[1]);
+
 			observer.vision = B.vision;
-			// socket.emit("observing",{map:observer.map,x:observer.x,y:observer.y});
+
 			resume_instance(instances[observer.in]);
 			instances[observer.in].observers[observer.id] = observer;
 			send_all_xy(observer);
@@ -4275,10 +4267,10 @@ function init_io() {
 			if (!player || player.s.mute) {
 				return fail_response("muted");
 			}
-			if (data.code && player.last_say && ssince(player.last_say) < 15) {
+			if (data.code && player.last_say && commonFunctions.ssince(player.last_say) < 15) {
 				return fail_response("chat_slowdown");
 			}
-			if (player.last_say && mssince(player.last_say) < 400) {
+			if (player.last_say && commonFunctions.mssince(player.last_say) < 400) {
 				return fail_response("chat_slowdown");
 			}
 			if (!message || !message.length) {
@@ -4453,11 +4445,9 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			// if(player.role!="gm") return socket.emit('game_log',"Cosmetics system is out of the test phase for now");
-			// console.log(data);
+
 			var cx = player.cx;
-			var cxl = all_cx(player);
-			// if(!player.tcx) player.tcx=clone(player.cx);
+			var cxl = commonFunctions.all_cx(player);
 			if (data.slot && !data.name) {
 				if (data.slot == "back") {
 					delete cx.tail;
@@ -4474,11 +4464,11 @@ function init_io() {
 					player.skin = data.name;
 				} else if ((T[data.name] == "body" || T[data.name] == "armor") && data.slot == "upper") {
 					cx.upper = data.name;
-				} else if (cxtype_to_slot[T[data.name]] && cxtype_to_slot[T[data.name]] != "skin") {
-					cx[cxtype_to_slot[T[data.name]]] = data.name;
+				} else if (commonFunctions.cxtype_to_slot[T[data.name]] && commonFunctions.cxtype_to_slot[T[data.name]] != "skin") {
+					cx[commonFunctions.cxtype_to_slot[T[data.name]]] = data.name;
 				}
 			}
-			prune_cx(player.cx, player.skin);
+			commonFunctions.prune_cx(player.cx, player.skin);
 			resend(player, "u+cid");
 			success_response();
 		});
@@ -4566,7 +4556,7 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			if (simple_distance(G.maps.main.ref.monsterhunter, player, true) > B.sell_dist) {
+			if (commonFunctions.simple_distance(G.maps.main.ref.monsterhunter, player, true) > B.sell_dist) {
 				return fail_response("distance");
 			}
 			var hunted = [];
@@ -4598,7 +4588,7 @@ function init_io() {
 				}
 				for (var mid in instances[id].monsters) {
 					var monster = instances[id].monsters[mid];
-					if (monster.level > mmax && !in_arr(monster.type, hunted) && !monster.target) {
+					if (monster.level > mmax && !commonFunctions.in_arr(monster.type, hunted) && !monster.target) {
 						// added the target condition [21/07/23]
 						name = monster.type;
 						mmax = monster.level;
@@ -4616,10 +4606,10 @@ function init_io() {
 					}
 				});
 			}
-			// console.log(times);
-			count = max(1, min(500, parseInt((20 * 60 * max(1, times)) / the_hp / (G.monsters[name].respawn + 0.25))));
+
+			count = commonFunctions.max(1, commonFunctions.min(500, parseInt((20 * 60 * commonFunctions.max(1, times)) / the_hp / (G.monsters[name].respawn + 0.25))));
 			if (gameplay == "hardcore") {
-				count = max(1, parseInt(count / 10));
+				count = commonFunctions.max(1, parseInt(count / 10));
 			}
 			player.s.monsterhunt = { sn: region + " " + server_name, id: name, c: count, ms: 30 * 60 * 1000, dl: true };
 			server.s["monsterhunt_" + name] = { name: player.name, id: name, ms: 20 * 60 * 1000, type: "monsterhunt" };
@@ -4708,8 +4698,8 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			if (player.p.dt.last_homeset && hsince(player.p.dt.last_homeset) < 36) {
-				return fail_response("sh_time", { hours: 36 - hsince(player.p.dt.last_homeset) });
+			if (player.p.dt.last_homeset && commonFunctions.hsince(player.p.dt.last_homeset) < 36) {
+				return fail_response("sh_time", { hours: 36 - commonFunctions.hsince(player.p.dt.last_homeset) });
 			}
 			player.p.dt.last_homeset = new Date();
 			player.p.home = region + server_name;
@@ -4844,7 +4834,7 @@ function init_io() {
 					to: data.to,
 					subject: data.subject || "",
 					message: data.message || "",
-					rid: randomStr(50),
+					rid: commonFunctions.randomStr(50),
 					retries: retries,
 					item: item,
 				},
@@ -4890,7 +4880,7 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			if (!can_walk(player)) {
+			if (!commonFunctions.can_walk(player)) {
 				return fail_response("transport_failed");
 			}
 			if (
@@ -4909,7 +4899,7 @@ function init_io() {
 			if (!player) {
 				return;
 			} // this was missing, probably caused a production exception - should be added everywhere [04/09/16]
-			if (!can_walk(player) || player.map == "jail") {
+			if (!commonFunctions.can_walk(player) || player.map == "jail") {
 				return fail_response("transport_failed");
 			}
 			var new_map = G.maps[data.to];
@@ -4927,7 +4917,7 @@ function init_io() {
 					!can_reach &&
 					door[4] == data.to &&
 					s == (door[5] || 0) &&
-					simple_distance(
+					commonFunctions.simple_distance(
 						{ map: player.map, x: G.maps[player.map].spawns[door[6]][0], y: G.maps[player.map].spawns[door[6]][1] },
 						player,
 					) < B.door_dist
@@ -4942,7 +4932,7 @@ function init_io() {
 			if (
 				!can_reach &&
 				G.maps[player.map].ref.transporter &&
-				simple_distance(G.maps[player.map].ref.transporter, player) < B.transporter_dist &&
+				commonFunctions.simple_distance(G.maps[player.map].ref.transporter, player) < B.transporter_dist &&
 				G.npcs.transporter.places[data.to] === s
 			) {
 				can_reach = "transport";
@@ -5013,19 +5003,14 @@ function init_io() {
 			if (gameplay != "normal") {
 				return fail_response("transport_failed");
 			}
-			if (!can_walk(player) || player.map == "jail") {
+			if (!commonFunctions.can_walk(player) || player.map == "jail") {
 				return fail_response("transport_failed");
 			}
 			if (player.s.block || player.targets > 5) {
 				return fail_response("cant_escape");
 			}
-			// if(player.role!="gm" && !(data.place==player.map && player.map=="cgallery"))
-			// {
-			// 	if(data.place!="resort" && !G.maps[player.map].ref.transporter || simple_distance(G.maps[player.map].ref.transporter,player)>80) return socket.emit("game_response","transport_cant_reach");
-			// 	if(data.place=="resort" && player.map!="resort") return socket.emit("game_response","transport_cant_reach");
-			// }
 			server_log(data);
-			var name = randomStr(24);
+			var name = commonFunctions.randomStr(24);
 			if (data.place == "resort" && 0) {
 				var name = "resort_" + data.name;
 				instance = instances[name] || create_instance(name, "resort_map");
@@ -5046,7 +5031,7 @@ function init_io() {
 					ref = G.maps.winterland.spawns[5];
 					item = "frozenkey";
 				}
-				if (simple_distance(player, { in: f, map: f, x: ref[0], y: ref[1] }) > 120) {
+				if (commonFunctions.simple_distance(player, { in: f, map: f, x: ref[0], y: ref[1] }) > 120) {
 					return fail_response("transport_cant_reach");
 				}
 				if (data.name) {
@@ -5087,7 +5072,7 @@ function init_io() {
 					if (current.skip || current.rskip) {
 						continue;
 					}
-					if (!in_arr(current.type, ["body", "head", "hair", "s_wings", "hat"])) {
+					if (!commonFunctions.in_arr(current.type, ["body", "head", "hair", "s_wings", "hat"])) {
 						continue;
 					}
 					for (var i = 0; i < matrix.length; i++) {
@@ -5179,14 +5164,14 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			// if(player.last.town && mssince(player.last.town)<1200) return; // bad ui experience [Unknown] - got reported and disabled [25/03/22]
-			if (!can_walk(player) || player.map == "jail") {
+			// if(player.last.town && commonFunctions.mssince(player.last.town)<1200) return; // bad ui experience [Unknown] - got reported and disabled [25/03/22]
+			if (!commonFunctions.can_walk(player) || player.map == "jail") {
 				return fail_response("transport_failed");
 			}
 			if ((0 && player.s.block) || player.targets > 5) {
 				return fail_response("cant_escape");
 			}
-			player.c.town = { ms: min((player.c.town && player.c.town.ms) || 5000, 3000) };
+			player.c.town = { ms: commonFunctions.min((player.c.town && player.c.town.ms) || 5000, 3000) };
 			resend(player, "u+nc");
 			success_response({ success: false, in_progress: true });
 		});
@@ -5197,7 +5182,7 @@ function init_io() {
 			}
 
 			if (player.rip_time) {
-				const msRemaining = B.rip_time - mssince(player.rip_time);
+				const msRemaining = B.rip_time - commonFunctions.mssince(player.rip_time);
 				if (msRemaining > 0) {
 					return fail_response("cant_respawn", { ms: msRemaining });
 				}
@@ -5249,7 +5234,7 @@ function init_io() {
 				if (current.skip || current.rskip) {
 					continue;
 				}
-				if (!in_arr(current.type, ["body", "head", "hair", "s_wings", "hat"])) {
+				if (!commonFunctions.in_arr(current.type, ["body", "head", "hair", "s_wings", "hat"])) {
 					continue;
 				}
 				for (var i = 0; i < matrix.length; i++) {
@@ -5277,15 +5262,15 @@ function init_io() {
 			}
 			var head = "head";
 			if (Math.random() < 0.1) {
-				head = random_one(heads);
+				head = commonFunctions.random_one(heads);
 			}
-			player.tskin = random_one(bodies);
-			player.tcx = [head, random_one(hairs)];
+			player.tskin = commonFunctions.random_one(bodies);
+			player.tcx = [head, commonFunctions.random_one(hairs)];
 			if (Math.random() < 0.08) {
-				player.tcx.push(random_one(wings));
+				player.tcx.push(commonFunctions.random_one(wings));
 			}
 			if (Math.random() < 0.4) {
-				player.tcx.push(random_one(hats));
+				player.tcx.push(commonFunctions.random_one(hats));
 			}
 			resend(player, "u+cid");
 		});
@@ -5339,13 +5324,13 @@ function init_io() {
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (!player.computer && simple_distance(G.maps.main.ref.craftsman, player) > B.sell_dist) {
+			if (!player.computer && commonFunctions.simple_distance(G.maps.main.ref.craftsman, player) > B.sell_dist) {
 				return fail_response("distance");
 			}
 			// if(player.esize<=0) return socket.emit("game_response","inventory_full");
 			var item = player.items[data.num];
 			if (item && item.level && G.items[item.name].compound) {
-				var cost = min(50000000, calculate_item_value(item) * 10);
+				var cost = commonFunctions.min(50000000, commonFunctions.calculate_item_value(item) * 10);
 				if (player.gold < cost) {
 					return fail_response("gold_not_enough");
 				}
@@ -5388,7 +5373,7 @@ function init_io() {
 				return fail_response("gold_not_enough");
 			}
 			if (
-				!can_add_items(player, list_to_pseudo_items(G.dismantle[item.name].items), {
+				!commonFunctions.can_add_items(player, list_to_pseudo_items(G.dismantle[item.name].items), {
 					space: ((item.q || 1) == 1 && 1) || 0,
 				})
 			) {
@@ -5400,7 +5385,7 @@ function init_io() {
 				if (e[0] < 1 && Math.random() > e[0]) {
 					return;
 				}
-				add_item(player, e[1], { q: max(1, e[0]), p: item.p && !G.titles[item.p].misc && item.p });
+				add_item(player, e[1], { q: commonFunctions.max(1, e[0]), p: item.p && !G.titles[item.p].misc && item.p });
 			});
 			resend(player, "reopen+nc+inv");
 			success_response("dismantle", { name: item.name, cevent: true });
@@ -5454,14 +5439,14 @@ function init_io() {
 			if (
 				!player.computer &&
 				!G.craft[name].quest &&
-				simple_distance(get_npc_coords("craftsman"), player) > B.sell_dist
+				commonFunctions.simple_distance(get_npc_coords("craftsman"), player) > B.sell_dist
 			) {
 				return fail_response("distance");
 			}
 			if (
 				!player.computer &&
 				G.craft[name].quest &&
-				simple_distance(get_npc_coords(G.craft[name].quest), player) > B.sell_dist
+				commonFunctions.simple_distance(get_npc_coords(G.craft[name].quest), player) > B.sell_dist
 			) {
 				return fail_response("distance");
 			}
@@ -5476,7 +5461,7 @@ function init_io() {
 					space = true;
 				}
 			});
-			if (!space && !can_add_item(player, create_new_item(name))) {
+			if (!space && !commonFunctions.can_add_item(player, create_new_item(name))) {
 				return fail_response("inventory_full");
 			}
 			if (!enough) {
@@ -5486,7 +5471,7 @@ function init_io() {
 			G.craft[name].items.forEach(function (x) {
 				consume(player, place[x[1]], x[0]);
 			});
-			var i = add_item(player, name, { r: 1, p: Object.keys(p).length && random_one(p) });
+			var i = add_item(player, name, { r: 1, p: Object.keys(p).length && commonFunctions.random_one(p) });
 			resend(player, "reopen+nc+inv");
 			success_response("craft", { num: i, name: name, cevent: true });
 		});
@@ -5520,7 +5505,7 @@ function init_io() {
 				return fail_response("invalid");
 			}
 			if (!player.computer) {
-				const dist = distance(player, def.quest ? G.quests[def.quest] : G.maps.main.exchange);
+				const dist = commonFunctions.distance(player, def.quest ? G.quests[def.quest] : G.maps.main.exchange);
 				if (dist > B.sell_dist) {
 					return fail_response("distance");
 				}
@@ -5568,7 +5553,7 @@ function init_io() {
 			if (item.q != data.q) {
 				return fail_response("safety_check");
 			}
-			if (!player.computer && simple_distance(npc, player) > B.sell_dist) {
+			if (!player.computer && commonFunctions.simple_distance(npc, player) > B.sell_dist) {
 				return fail_response("distance");
 			}
 			if (item.q < G.tokens[item.name][data.name]) {
@@ -5577,7 +5562,7 @@ function init_io() {
 
 			if (G.tokens[item.name][data.name] < 1) {
 				var q = parseInt(1 / G.tokens[item.name][data.name]);
-				if (item.q != 1 && !can_add_item(player, { name: data.name, q: q })) {
+				if (item.q != 1 && !commonFunctions.can_add_item(player, { name: data.name, q: q })) {
 					return fail_response("inventory_full");
 				}
 				consume(player, data.num, 1);
@@ -5593,7 +5578,7 @@ function init_io() {
 				if (idata) {
 					new_item.data = idata;
 				}
-				if (item.q != G.tokens[item.name][data.name] && !can_add_item(player, new_item)) {
+				if (item.q != G.tokens[item.name][data.name] && !commonFunctions.can_add_item(player, new_item)) {
 					return fail_response("inventory_full");
 				}
 				consume(player, data.num, G.tokens[item.name][data.name]);
@@ -5611,7 +5596,7 @@ function init_io() {
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (!player.computer && simple_distance(G.maps.desertland.ref.locksmith, player) > B.sell_dist) {
+			if (!player.computer && commonFunctions.simple_distance(G.maps.desertland.ref.locksmith, player) > B.sell_dist) {
 				return fail_response("distance");
 			}
 			var item = player.items[data.num];
@@ -5619,7 +5604,7 @@ function init_io() {
 				return fail_response("no_item");
 			}
 			var def = G.items[item.name];
-			if (in_arr(def.type, ["uscroll", "cscroll", "pscroll", "offering", "tome"])) {
+			if (commonFunctions.in_arr(def.type, ["uscroll", "cscroll", "pscroll", "offering", "tome"])) {
 				return fail_response("locksmith_cant");
 			}
 			if (data.operation == "unlock") {
@@ -5632,7 +5617,7 @@ function init_io() {
 						return fail_response("gold_not_enough");
 					}
 					player.gold -= 250000;
-					item.ld = JSON.stringify(future_s(2 * 24 * 60 * 60));
+					item.ld = JSON.stringify(commonFunctions.future_s(2 * 24 * 60 * 60));
 					item.l = "u";
 					socket.emit("game_response", "locksmith_unsealed");
 				} else if (item.l == "u") {
@@ -5642,7 +5627,7 @@ function init_io() {
 						socket.emit("game_response", "locksmith_unseal_complete");
 					} else {
 						resend(player, "reopen+nc");
-						return success_response("locksmith_unsealing", { hours: -hsince(date), success: false, in_progress: true });
+						return success_response("locksmith_unsealing", { hours: -commonFunctions.hsince(date), success: false, in_progress: true });
 					}
 				} else {
 					if (player.gold < 250000) {
@@ -5707,13 +5692,13 @@ function init_io() {
 				if (!item0 || !item1 || !item2) {
 					return fail_response("no_item");
 				}
-				if (!player.computer && simple_distance(G.maps.main.compound, player) > B.sell_dist) {
+				if (!player.computer && commonFunctions.simple_distance(G.maps.main.compound, player) > B.sell_dist) {
 					return socket.emit("game_response", { response: "distance", place: "compound", failed: true });
 				}
 				var def = G.items[item0.name];
 				var scroll_def = G.items[scroll.name];
 				var offering_def = offering && G.items[offering.name];
-				var grade = calculate_item_grade(def, item0);
+				var grade = commonFunctions.calculate_item_grade(def, item0);
 				if (grade == 4) {
 					return socket.emit("game_response", {
 						response: "max_level",
@@ -5762,7 +5747,7 @@ function init_io() {
 				var high = false;
 				var grace_bonus = 0;
 				if (item0.level >= 3) {
-					igrade = calculate_item_grade(def, { name: item0.name, level: item0.level - 2 });
+					igrade = commonFunctions.calculate_item_grade(def, { name: item0.name, level: item0.level - 2 });
 				}
 
 				delete player.p.c_item;
@@ -5798,12 +5783,12 @@ function init_io() {
 						high = true;
 						increase = 1;
 					} else if (offering_def.grade == grade) {
-						probability = probability * 1.36 + min(30 * 0.027, grace);
+						probability = probability * 1.36 + commonFunctions.min(30 * 0.027, grace);
 					} else if (offering_def.grade == grade - 1) {
-						probability = probability * 1.15 + min(25 * 0.019, grace) / max(item0.level - 2, 1);
+						probability = probability * 1.15 + commonFunctions.min(25 * 0.019, grace) / commonFunctions.max(item0.level - 2, 1);
 						increase = 0.2;
 					} else {
-						probability = probability * 1.08 + min(15 * 0.015, grace) / max(item0.level - 1, 1);
+						probability = probability * 1.08 + commonFunctions.min(15 * 0.015, grace) / commonFunctions.max(item0.level - 1, 1);
 						increase = 0.1;
 					}
 
@@ -5814,9 +5799,9 @@ function init_io() {
 					server_log("offering " + result + " < " + probability);
 				} else {
 					grace = 0.007 * ((item0.grace || 0) + (item1.grace || 0) + (item2.grace || 0) + player.p.ograce);
-					probability = probability + min(25 * 0.007, grace) / max(item0.level - 1, 1);
+					probability = probability + commonFunctions.min(25 * 0.007, grace) / commonFunctions.max(item0.level - 1, 1);
 					if (!data.calculate) {
-						item0.grace = max(max(item0.grace || 0, item1.grace || 0), item2.grace || 0);
+						item0.grace = commonFunctions.max(commonFunctions.max(item0.grace || 0, item1.grace || 0), item2.grace || 0);
 					}
 				}
 
@@ -5828,9 +5813,9 @@ function init_io() {
 					probability = 0.9999999999999;
 					proc = offering && 0.12;
 				} else {
-					probability = min(
+					probability = commonFunctions.min(
 						probability,
-						min(oprobability * (3 + ((high && high * 0.6) || 0)), oprobability + 0.2 + ((high && high * 0.05) || 0)),
+						commonFunctions.min(oprobability * (3 + ((high && high * 0.6) || 0)), oprobability + 0.2 + ((high && high * 0.05) || 0)),
 					);
 				}
 
@@ -5920,14 +5905,14 @@ function init_io() {
 						var seconds = 6 * 24 * 60 * 60;
 						[item0, item1, item2].forEach(function (i) {
 							if (i.expires) {
-								seconds -= ssince(i.expires);
+								seconds -= commonFunctions.ssince(i.expires);
 								activate = true;
 							} else {
 								seconds += def.days * 24 * 60 * 60;
 							}
 						});
 						if (activate) {
-							item0.expires = future_s(seconds / 3);
+							item0.expires = commonFunctions.future_s(seconds / 3);
 						}
 					}
 				} else {
@@ -5964,7 +5949,7 @@ function init_io() {
 					return socket.emit("game_response", "upgrade_in_progress");
 				}
 				G.maps.main.upgrade.name = player.name;
-				if (!player.computer && simple_distance(G.maps.main.upgrade, player) > B.sell_dist) {
+				if (!player.computer && commonFunctions.simple_distance(G.maps.main.upgrade, player) > B.sell_dist) {
 					return socket.emit("game_response", { response: "distance", place: "upgrade", failed: true });
 				}
 				if (!item) {
@@ -5988,13 +5973,13 @@ function init_io() {
 				var item_def = G.items[item.name];
 				var scroll_def = scroll && G.items[scroll.name];
 				var offering_def = offering && G.items[offering.name];
-				var grade = calculate_item_grade(item_def, item);
+				var grade = commonFunctions.calculate_item_grade(item_def, item);
 				if (!item_def.upgrade) {
 					return socket.emit("game_response", "upgrade_cant");
 				}
 				if (
 					scroll &&
-					(!in_arr(scroll_def.type, ["uscroll", "pscroll"]) ||
+					(!commonFunctions.in_arr(scroll_def.type, ["uscroll", "pscroll"]) ||
 						(scroll_def.type == "uscroll" && !item_def.upgrade) ||
 						(scroll_def.type == "pscroll" && !item_def.stat) ||
 						grade > scroll_def.grade)
@@ -6015,7 +6000,7 @@ function init_io() {
 				var oprobability = 1;
 				var grace = 0;
 				var high = false;
-				var ograde = calculate_item_grade(item_def, { name: item.name, level: 0 });
+				var ograde = commonFunctions.calculate_item_grade(item_def, { name: item.name, level: 0 });
 				var tmult = 1;
 				if (ograde == 1) {
 					tmult = 1.5;
@@ -6038,7 +6023,7 @@ function init_io() {
 						var ms = 2000;
 						if (
 							G.items[offering.name].offering > ograde ||
-							(G.items[offering.name].offering == 2 && calculate_item_value(item) <= 20000000)
+							(G.items[offering.name].offering == 2 && commonFunctions.calculate_item_value(item) <= 20000000)
 						) {
 							chance = 0.32;
 						}
@@ -6139,11 +6124,11 @@ function init_io() {
 						consume_one(player, data.scroll_num);
 					}
 					oprobability = probability = D.upgrades[item_def.igrade][new_level];
-					// grace=max(0,min(new_level+1, (item.grace||0) + min(3,player.p.ugrace[new_level]/3.0) +min(2,ugrace[new_level]/4.0) +item_def.igrace + player.p.ograce/2.0 )); - original [16/07/18]
-					grace = max(
+
+					grace = commonFunctions.max(
 						0,
-						min(new_level + 1, (item.grace || 0) + min(3, player.p.ugrace[new_level] / 4.5) + item_def.igrace) +
-							min(6, S.ugrace[new_level] / 3.0) +
+						commonFunctions.min(new_level + 1, (item.grace || 0) + commonFunctions.min(3, player.p.ugrace[new_level] / 4.5) + item_def.igrace) +
+						commonFunctions.min(6, S.ugrace[new_level] / 3.0) +
 							player.p.ograce / 3.2,
 					);
 					server_log(
@@ -6152,13 +6137,13 @@ function init_io() {
 							"\nItem: " +
 							(item.grace || 0) +
 							"\nPlayer: " +
-							min(3, player.p.ugrace[new_level] / 4.5) +
+							commonFunctions.min(3, player.p.ugrace[new_level] / 4.5) +
 							"\nDef: " +
 							item_def.igrace +
 							"\nOgrace:" +
 							player.p.ograce / 3.2 +
 							"\nS.ugrace: " +
-							min(6, S.ugrace[new_level] / 3.0),
+							commonFunctions.min(6, S.ugrace[new_level] / 3.0),
 					);
 					grace = (probability * grace) / new_level + grace / 1000.0;
 					server_log("Grace-prob: " + grace);
@@ -6203,7 +6188,7 @@ function init_io() {
 							item.grace = (item.grace || 0) + increase;
 						} // previously +1 [16/07/18]
 					} else {
-						grace = max(0, grace / 4.8 - 0.4 / ((new_level - 0.999) * (new_level - 0.999)));
+						grace = commonFunctions.max(0, grace / 4.8 - 0.4 / ((new_level - 0.999) * (new_level - 0.999)));
 						probability += grace; // previously 12.0 // previously 9.0 [16/07/18]
 					}
 
@@ -6215,13 +6200,13 @@ function init_io() {
 					if (data.item_num == player.p.item_num && Math.random() < 0.6) {
 						// Added [29/10/17]
 						server_log("16 cheat");
-						result = max(Math.random() / 10000.0, result * 0.975 - 0.012);
+						result = commonFunctions.max(Math.random() / 10000.0, result * 0.975 - 0.012);
 					}
 
 					if (high) {
-						probability = min(probability, min(oprobability + 0.36, oprobability * 3));
+						probability = commonFunctions.min(probability, commonFunctions.min(oprobability + 0.36, oprobability * 3));
 					} else {
-						probability = min(probability, min(oprobability + 0.24, oprobability * 2));
+						probability = commonFunctions.min(probability, commonFunctions.min(oprobability + 0.24, oprobability * 2));
 					}
 					server_log(result + " < " + probability + " grace: " + grace);
 
@@ -6269,10 +6254,7 @@ function init_io() {
 						},
 					};
 
-					//result=probability+EPS;
-
 					if (result <= probability) {
-						// console.log("here");
 						player.p.ugrace[new_level] = S.ugrace[new_level] = 0;
 						if (offering) {
 							player.p.ograce *= 0.25;
@@ -6391,12 +6373,12 @@ function init_io() {
 			}
 			player.c = {};
 			if (Array.isArray(data)) {
-				data.length = min(data.length, 15);
+				data.length = commonFunctions.min(data.length, 15);
 				let resolve = [];
 				let penalty = 0;
 				for (let i = 0; i < data.length; i++) {
 					let equip_def = data[i];
-					equip_def.num = to_number(equip_def.num);
+					equip_def.num = commonFunctions.to_number(equip_def.num);
 					if (equip_def.num >= player.items.length) {
 						resolve.push("invalid");
 						break;
@@ -6439,7 +6421,7 @@ function init_io() {
 					resolve.push({ num: equip_def.num, slot });
 				}
 				if ("penalty_cd" in player.s) {
-					player.s.penalty_cd.ms = min(player.s.penalty_cd.ms + penalty, 120000);
+					player.s.penalty_cd.ms = commonFunctions.min(player.s.penalty_cd.ms + penalty, 120000);
 				} else {
 					player.s.penalty_cd = { ms: penalty };
 				}
@@ -6455,7 +6437,7 @@ function init_io() {
 				return;
 			}
 			player.c = {};
-			data.num = to_number(data.num);
+			data.num = commonFunctions.to_number(data.num);
 			if (data.num >= player.items.length) {
 				return fail_response("invalid");
 			}
@@ -6484,16 +6466,16 @@ function init_io() {
 					return fail_response("item_locked");
 				}
 				var slot = data.slot;
-				var price = round(min(99999999999, max(parseInt(data.price) || 1, 1)));
+				var price = round(commonFunctions.min(99999999999, commonFunctions.max(parseInt(data.price) || 1, 1)));
 				var minutes = 1;
-				data.q = max(1, parseInt(data.q) || 1);
+				data.q = commonFunctions.max(1, parseInt(data.q) || 1);
 				if ((item.q || 1) < data.q) {
 					return fail_response("not_enough");
 				}
 				if (data.giveaway) {
-					minutes = max(
+					minutes = commonFunctions.max(
 						5,
-						min(600, min(parseInt(data.minutes) || 5, max(60, round((calculate_item_value(item) * data.q) / 40000)))),
+						commonFunctions.min(600, commonFunctions.min(parseInt(data.minutes) || 5, commonFunctions.max(60, round((commonFunctions.calculate_item_value(item) * data.q) / 40000)))),
 					);
 				}
 				if (!price || data.giveaway) {
@@ -6506,7 +6488,7 @@ function init_io() {
 					player.slots[slot] = create_new_item(player.items[data.num].name, 1);
 					player.slots[slot].price = price;
 					player.slots[slot].q = data.q;
-					player.slots[slot].rid = randomStr(4);
+					player.slots[slot].rid = commonFunctions.randomStr(4);
 					if (player.items[data.num].data) {
 						player.slots[slot].data = player.items[data.num].data;
 					}
@@ -6522,12 +6504,12 @@ function init_io() {
 					} else {
 						socket.emit(
 							"game_log",
-							"Listed " + data.q + " " + item_name(player.slots[slot]) + " at " + to_pretty_num(price) + " gold each",
+							"Listed " + data.q + " " + item_name(player.slots[slot]) + " at " + commonFunctions.to_pretty_num(price) + " gold each",
 						);
 					}
 				} else {
 					player.items[data.num].price = price;
-					player.items[data.num].rid = randomStr(4);
+					player.items[data.num].rid = commonFunctions.randomStr(4);
 					player.slots[slot] = player.items[data.num];
 					if (data.giveaway) {
 						player.slots[slot].giveaway = minutes;
@@ -6542,7 +6524,7 @@ function init_io() {
 					} else {
 						socket.emit(
 							"game_log",
-							"Listed " + item_name(player.slots[slot]) + " at " + to_pretty_num(price) + " gold",
+							"Listed " + item_name(player.slots[slot]) + " at " + commonFunctions.to_pretty_num(price) + " gold",
 						);
 					}
 				}
@@ -6555,9 +6537,9 @@ function init_io() {
 					add_condition(player, G.items[player.slots.elixir.name].withdrawal);
 				}
 				if (player.slots.elixir && player.slots.elixir.name == item.name) {
-					player.slots.elixir.expires = future_s(def.duration * 60 * 60 - ssince(player.slots.elixir.expires) * 0.975);
+					player.slots.elixir.expires = commonFunctions.future_s(def.duration * 60 * 60 - commonFunctions.ssince(player.slots.elixir.expires) * 0.975);
 				} else {
-					player.slots.elixir = { name: item.name, expires: future_s(def.duration * 60 * 60), ex: true };
+					player.slots.elixir = { name: item.name, expires: commonFunctions.future_s(def.duration * 60 * 60), ex: true };
 				}
 				if (G.items[item.name] && G.items[item.name].withdrawal && player.s.withdrawal) {
 					delete player.s.withdrawal;
@@ -6594,7 +6576,7 @@ function init_io() {
 				new_monster(player.in, { type: def.spawn, stype: "trap", x: player.x, y: player.y, owner: player.name });
 				consume_one(player, data.num);
 			} else if (def.gives) {
-				if (player.last.potion && mssince(player.last.potion) < 0) {
+				if (player.last.potion && commonFunctions.mssince(player.last.potion) < 0) {
 					return fail_response("not_ready");
 				}
 				if (item.l) {
@@ -6610,7 +6592,7 @@ function init_io() {
 						amount = round(amount / 2);
 					}
 					player[p[0]] = (player[p[0]] || 0) + amount;
-					player[p[0]] = max(1, player[p[0]]);
+					player[p[0]] = commonFunctions.max(1, player[p[0]]);
 					if (p[0] == "hp") {
 						if (amount > 0) {
 							disappearing_text(socket, player, "+" + amount, { color: "hp", xy: 1, s: "hp" });
@@ -6635,12 +6617,12 @@ function init_io() {
 						}
 					}
 				}
-				player.hp = min(player.hp, player.max_hp);
-				player.mp = min(player.mp, player.max_mp);
+				player.hp = commonFunctions.min(player.hp, player.max_hp);
+				player.mp = commonFunctions.min(player.mp, player.max_mp);
 				if (def.cooldown) {
 					timeout = def.cooldown;
 				}
-				player.last.potion = future_ms(timeout);
+				player.last.potion = commonFunctions.future_ms(timeout);
 				if (!xp) {
 					to_update = "u+cid+reopen+nc";
 				}
@@ -6663,7 +6645,7 @@ function init_io() {
 				}
 				player.items[data.num] = existing;
 				player.citems[data.num] = cache_item(existing);
-				player.s.penalty_cd = { ms: min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 120, 120000) };
+				player.s.penalty_cd = { ms: commonFunctions.min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 120, 120000) };
 				resolve.slot = slot;
 			} else {
 				return fail_response("cant_consume");
@@ -6683,7 +6665,7 @@ function init_io() {
 			if (!npc || !npc.npc) {
 				return;
 			}
-			if (simple_distance(player, npc) > 1000) {
+			if (commonFunctions.simple_distance(player, npc) > 1000) {
 				return socket.emit("game_response", "distance");
 			}
 			if (data.npc == NPC_prefix + "Marven" && npc.misc == true) {
@@ -6700,7 +6682,7 @@ function init_io() {
 			}
 			var item = player.slots[data.slot];
 			var done = false;
-			if (in_arr(data.slot, trade_slots) && item.giveaway !== undefined) {
+			if (commonFunctions.in_arr(data.slot, commonFunctions.trade_slots) && item.giveaway !== undefined) {
 				return fail_response("giveaway");
 			}
 			// an oversight allowed .giveaway items to be equipped, so now they can be unequipped from regular slots [04/11/21]
@@ -6721,7 +6703,7 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			if (simple_distance(G.maps.main.ref.secondhands, player) > 500) {
+			if (commonFunctions.simple_distance(G.maps.main.ref.secondhands, player) > 500) {
 				return socket.emit("game_response", "distance");
 			}
 			socket.emit("secondhands", csold);
@@ -6737,7 +6719,7 @@ function init_io() {
 			if (!player.donation) {
 				return socket.emit("game_response", "lostandfound_donate");
 			}
-			if (simple_distance(G.maps.woffice.ref.lostandfound, player) > 500) {
+			if (commonFunctions.simple_distance(G.maps.woffice.ref.lostandfound, player) > 500) {
 				return socket.emit("game_response", "distance");
 			}
 			socket.emit("lostandfound", cfound);
@@ -6764,8 +6746,8 @@ function init_io() {
 				return fail_response("item_blocked");
 			}
 
-			let quantity = min(max(parseInt(data.quantity) || 0, 1), (item && item.q) || 1);
-			quantity = min(quantity, G.items[item.name].s);
+			let quantity = commonFunctions.min(commonFunctions.max(parseInt(data.quantity) || 0, 1), (item && item.q) || 1);
+			quantity = commonFunctions.min(quantity, G.items[item.name].s);
 			if (quantity >= item.q) {
 				// They requested to split the whole stack...
 				return success_response({ from: data.num, to: data.num, q: quantity });
@@ -6795,7 +6777,7 @@ function init_io() {
 			var player = players[socket.id];
 			var num = data.num;
 			var item = player.items[data.num];
-			var quantity = min(max(parseInt(data.quantity) || 0, 1), (item && item.q) || 1);
+			var quantity = commonFunctions.min(commonFunctions.max(parseInt(data.quantity) || 0, 1), (item && item.q) || 1);
 			var can_reach = false;
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
@@ -6813,7 +6795,7 @@ function init_io() {
 				return fail_response("item_blocked");
 			}
 			(G.maps[player.map].merchants || []).forEach(function (m) {
-				if (simple_distance(player, m) < B.sell_dist) {
+				if (commonFunctions.simple_distance(player, m) < B.sell_dist) {
 					can_reach = m;
 				}
 			});
@@ -6824,7 +6806,7 @@ function init_io() {
 				return fail_response("distance");
 			}
 			can_reach.name = player.name;
-			var value = calculate_item_value(item);
+			var value = commonFunctions.calculate_item_value(item);
 			consume(player, data.num, quantity);
 			player.gold += value * quantity;
 			var new_item = cache_item(item);
@@ -6855,7 +6837,7 @@ function init_io() {
 			}
 			var shells = Math.floor(gold / G.multipliers.shells_to_gold);
 			player.gold -= gold;
-			socket.emit("game_log", "Gave " + to_pretty_num(gold) + " gold");
+			socket.emit("game_log", "Gave " + commonFunctions.to_pretty_num(gold) + " gold");
 			appengine_call(
 				"bill_user",
 				{ auth: player.auth, amount: -shells, reason: "buy_shells", name: player.name },
@@ -6866,7 +6848,7 @@ function init_io() {
 						return;
 					}
 					player.cash = result.cash;
-					socket.emit("game_log", "Received " + to_pretty_num(shells) + " shells");
+					socket.emit("game_log", "Received " + commonFunctions.to_pretty_num(shells) + " shells");
 
 					resend(player, "reopen+nc");
 				},
@@ -6877,7 +6859,7 @@ function init_io() {
 			var player = players[socket.id];
 			var name = data.name;
 			var def = G.items[data.name];
-			var quantity = min(max(parseInt(data.quantity) || 0, 1), (def && def.s) || 9999);
+			var quantity = commonFunctions.min(commonFunctions.max(parseInt(data.quantity) || 0, 1), (def && def.s) || 9999);
 			if (!player || player.user || gameplay == "hardcore" || gameplay == "test") {
 				return fail_response("cant_in_bank");
 			}
@@ -6891,7 +6873,7 @@ function init_io() {
 			if (!def.s) {
 				quantity = 1;
 			}
-			if (!can_add_item(player, create_new_item(name, quantity))) {
+			if (!commonFunctions.can_add_item(player, create_new_item(name, quantity))) {
 				return fail_response("no_space");
 			}
 			appengine_call(
@@ -6907,7 +6889,7 @@ function init_io() {
 					var new_item = create_new_item(name, quantity);
 					var done = false;
 					add_item(player, new_item, { announce: false });
-					socket.emit("game_log", "Spent " + to_pretty_num(cost) + " shells");
+					socket.emit("game_log", "Spent " + commonFunctions.to_pretty_num(cost) + " shells");
 
 					resend(player, "reopen+nc+inv");
 				},
@@ -6939,7 +6921,7 @@ function init_io() {
 			if (player.s.hopsickness && ev == "lostandfound") {
 				return fail_response("cant_when_sick", { goblin: true });
 			}
-			if (simple_distance(npc, player) > 500) {
+			if (commonFunctions.simple_distance(npc, player) > 500) {
 				return socket.emit("game_response", "distance");
 			}
 			for (var i = 0; i < c.length; i++) {
@@ -6947,9 +6929,9 @@ function init_io() {
 					if (mult == 2 && G.items[c[i].name].cash) {
 						mult = 3;
 					}
-					var gold = calculate_item_value(c[i]) * mult * (c[i].q || 1);
+					var gold = commonFunctions.calculate_item_value(c[i]) * mult * (c[i].q || 1);
 					var item = c[i];
-					if (!can_add_item(player, c[i])) {
+					if (!commonFunctions.can_add_item(player, c[i])) {
 						return disappearing_text(socket, player, "NO SPACE");
 					}
 					if (gold > player.gold) {
@@ -6960,7 +6942,7 @@ function init_io() {
 					add_item(player, c[i], { announce: false });
 					c.splice(i, 1);
 					cc.splice(i, 1);
-					socket.emit("game_log", "Spent " + to_pretty_num(gold) + " gold");
+					socket.emit("game_log", "Spent " + commonFunctions.to_pretty_num(gold) + " gold");
 					resend(player, "reopen+nc+inv");
 					socket.emit(ev, cc);
 					done = true;
@@ -6979,18 +6961,18 @@ function init_io() {
 				return fail_response("cant_in_bank");
 			}
 			var name = data.name;
-			var quantity = min(max(parseInt(data.quantity) || 0, 1), (G.items[name] && G.items[name].s) || 9999);
+			var quantity = commonFunctions.min(commonFunctions.max(parseInt(data.quantity) || 0, 1), (G.items[name] && G.items[name].s) || 9999);
 			var cost = 0;
 			var added = false;
 			var done = false;
-			if (!can_buy[name] && gameplay != "test") {
+			if (!commonFunctions.can_buy[name] && gameplay != "test") {
 				return fail_response("buy_cant_npc");
 			}
-			if (!can_add_item(player, create_new_item(name, quantity))) {
+			if (!commonFunctions.can_add_item(player, create_new_item(name, quantity))) {
 				return fail_response("buy_cant_space");
 			}
 			(G.maps[player.map].items[name] || []).forEach(function (l) {
-				if (simple_distance(player, l) < B.sell_dist) {
+				if (commonFunctions.simple_distance(player, l) < B.sell_dist) {
 					can_reach = l;
 				}
 			});
@@ -7037,11 +7019,11 @@ function init_io() {
 			if (!receiver || receiver.user) {
 				return fail_response("receiver_unavailable");
 			}
-			if (distance(receiver, player, true) > B.dist || receiver.map != player.map) {
+			if (commonFunctions.distance(receiver, player, true) > B.dist || receiver.map != player.map) {
 				return fail_response("distance");
 			}
 			if (data.num !== undefined) {
-				data.num = max(0, parseInt(data.num) || 0);
+				data.num = commonFunctions.max(0, parseInt(data.num) || 0);
 				var item = player.items[data.num];
 				if (!item) {
 					return fail_response("send_no_item");
@@ -7055,11 +7037,11 @@ function init_io() {
 				if (item.b) {
 					return fail_response("item_blocked");
 				}
-				data.q = min(item.q || 1, max(1, parseInt(data.q || 1) || 1));
+				data.q = commonFunctions.min(item.q || 1, commonFunctions.max(1, parseInt(data.q || 1) || 1));
 				if (!data.q) {
 					return fail_response("no_item");
 				}
-				if (!can_add_item(receiver, create_new_item(item.name, data.q))) {
+				if (!commonFunctions.can_add_item(receiver, create_new_item(item.name, data.q))) {
 					return fail_response("send_no_space");
 				}
 				if ((item.q || 1) == data.q) {
@@ -7115,7 +7097,7 @@ function init_io() {
 					place: "send",
 				});
 			} else if (data.gold !== undefined) {
-				data.gold = min(player.gold, max(1, parseInt(data.gold || 1) || 1)) || player.gold;
+				data.gold = commonFunctions.min(player.gold, commonFunctions.max(1, parseInt(data.gold || 1) || 1)) || player.gold;
 				if (!data.gold) {
 					return fail_response("invalid");
 				}
@@ -7152,8 +7134,8 @@ function init_io() {
 					place: "send",
 				});
 			} else if (data.cx !== undefined) {
-				var cxl = map_cx(player);
-				var count = all_cx(player, 1);
+				var cxl = commonFunctions.map_cx(player);
+				var count = commonFunctions.all_cx(player, 1);
 				if (!(cxl[data.cx] && player.p.acx[cxl[data.cx]] && count[data.cx] > 0)) {
 					return fail_response("send_no_cx");
 				}
@@ -7198,7 +7180,7 @@ function init_io() {
 			if (!player || player.user) {
 				return game_response("cant_in_bank");
 			}
-			var gold = max(1, min(parseInt(data.gold) || 0, 1000000000));
+			var gold = commonFunctions.max(1, commonFunctions.min(parseInt(data.gold) || 0, 1000000000));
 			if (gold > player.gold) {
 				return socket.emit("game_response", "gold_not_enough");
 			}
@@ -7219,7 +7201,7 @@ function init_io() {
 			player.gold -= gold;
 			S.gold += gold;
 			if (gold >= 5000000) {
-				lstack(S.logs.donate, { name: player.name, gold: gold, xp: XPX });
+				commonFunctions.lstack(S.logs.donate, { name: player.name, gold: gold, xp: XPX });
 			}
 			if (player.type == "merchant") {
 				player.xp += parseInt(gold * XPX);
@@ -7230,13 +7212,13 @@ function init_io() {
 		socket.on("destroy", function (data) {
 			var player = players[socket.id];
 			var add = "+nc+inv";
-			data.num = max(0, parseInt(data.num) || 0);
+			data.num = commonFunctions.max(0, parseInt(data.num) || 0);
 			if (!player.items[data.num]) {
 				return fail_response("no_item", { num: data.num });
 			}
 			var item = player.items[data.num];
 			var name = player.items[data.num].name;
-			data.q = min(max(parseInt(data.q) || 0, 1), (item && item.q) || 1);
+			data.q = commonFunctions.min(commonFunctions.max(parseInt(data.q) || 0, 1), (item && item.q) || 1);
 			if (item.name == "placeholder") {
 				return fail_response("item_placeholder", { num: data.num });
 			}
@@ -7266,7 +7248,7 @@ function init_io() {
 					if (announce && !player.stealth) {
 						broadcast("server_message", {
 							message: player.name + " received " + item_to_phrase(item),
-							color: colors.server_success,
+							color: commonFunctions.colors.server_success,
 							item: cache_item(item),
 							type: "server_usuccess",
 							name: player.name,
@@ -7285,7 +7267,7 @@ function init_io() {
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (!in_arr(data.slot, trade_slots)) {
+			if (!commonFunctions.in_arr(data.slot, commonFunctions.trade_slots)) {
 				return fail_response("invalid");
 			}
 			if (!seller || seller.npc || is_invis(seller)) {
@@ -7294,7 +7276,7 @@ function init_io() {
 			if (seller.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (distance(seller, player, true) > B.dist || seller.map != player.map) {
+			if (commonFunctions.distance(seller, player, true) > B.dist || seller.map != player.map) {
 				return fail_response("distance");
 			}
 			if (seller.id == player.id) {
@@ -7336,8 +7318,8 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			data.q = min(9999, max(1, parseInt(data.q || 1) || 1));
-			if (!in_arr(data.slot, trade_slots) || !G.items[data.name] || data.name == "placeholder") {
+			data.q = commonFunctions.min(9999, commonFunctions.max(1, parseInt(data.q || 1) || 1));
+			if (!commonFunctions.in_arr(data.slot, commonFunctions.trade_slots) || !G.items[data.name] || data.name == "placeholder") {
 				return fail_response("invalid");
 			}
 			if (player.slots[data.slot] && !player.slots[data.slot].b) {
@@ -7348,13 +7330,13 @@ function init_io() {
 			}
 			var item = {
 				name: data.name,
-				rid: randomStr(4),
-				price: round(min(99999999999, max(parseInt(data.price) || 1, 1))),
+				rid: commonFunctions.randomStr(4),
+				price: round(commonFunctions.min(99999999999, commonFunctions.max(parseInt(data.price) || 1, 1))),
 				b: true,
 			};
 			if (G.items[data.name].upgrade || G.items[data.name].compound) {
-				item.q = min(99, data.q);
-				item.level = round(min(12, max(parseInt(data.level) || 0, 0)));
+				item.q = commonFunctions.min(99, data.q);
+				item.level = round(commonFunctions.min(12, commonFunctions.max(parseInt(data.level) || 0, 0)));
 			} else {
 				item.q = data.q;
 			}
@@ -7370,11 +7352,11 @@ function init_io() {
 			var num;
 			var actual = null;
 			var num = null;
-			data.q = max(1, parseInt(data.q || 1) || 1);
+			data.q = commonFunctions.max(1, parseInt(data.q || 1) || 1);
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (!in_arr(data.slot, trade_slots)) {
+			if (!commonFunctions.in_arr(data.slot, commonFunctions.trade_slots)) {
 				return fail_response("invalid");
 			}
 			if (!buyer || buyer.npc || is_invis(buyer)) {
@@ -7383,7 +7365,7 @@ function init_io() {
 			if (player.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (distance(buyer, player, true) > B.dist) {
+			if (commonFunctions.distance(buyer, player, true) > B.dist) {
 				return fail_response("distance");
 			}
 			if (buyer.id == player.id) {
@@ -7424,7 +7406,7 @@ function init_io() {
 			if (actual.b) {
 				return fail_response("item_blocked");
 			}
-			if (!can_add_item(buyer, create_new_item(item.name, data.q))) {
+			if (!commonFunctions.can_add_item(buyer, create_new_item(item.name, data.q))) {
 				return fail_response("trade_bspace");
 			}
 			var price = item.price * data.q;
@@ -7465,10 +7447,10 @@ function init_io() {
 
 			socket.emit(
 				"game_log",
-				"Sales tax " + to_pretty_num(price - round(price * (1 - player.tax))) + " gold [" + player.tax * 100 + "%]",
+				"Sales tax " + commonFunctions.to_pretty_num(price - round(price * (1 - player.tax))) + " gold [" + player.tax * 100 + "%]",
 			);
-			socket.emit("game_log", "Received " + to_pretty_num(round(price * (1 - player.tax))) + " gold");
-			buyer.socket.emit("game_log", "Spent " + to_pretty_num(price) + " gold");
+			socket.emit("game_log", "Received " + commonFunctions.to_pretty_num(round(price * (1 - player.tax))) + " gold");
+			buyer.socket.emit("game_log", "Spent " + commonFunctions.to_pretty_num(price) + " gold");
 
 			xy_emit(buyer, "ui", {
 				type: "+$$",
@@ -7488,11 +7470,11 @@ function init_io() {
 			var player = players[socket.id];
 			var seller = players[id_to_id[data.id]];
 			var num;
-			data.q = max(1, parseInt(data.q || 1) || 1);
+			data.q = commonFunctions.max(1, parseInt(data.q || 1) || 1);
 			if (!player || player.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (!in_arr(data.slot, trade_slots)) {
+			if (!commonFunctions.in_arr(data.slot, commonFunctions.trade_slots)) {
 				return fail_response("invalid");
 			}
 			if (!seller || seller.npc || is_invis(seller)) {
@@ -7501,7 +7483,7 @@ function init_io() {
 			if (seller.user) {
 				return fail_response("cant_in_bank");
 			}
-			if (distance(seller, player, true) > B.dist || seller.map != player.map) {
+			if (commonFunctions.distance(seller, player, true) > B.dist || seller.map != player.map) {
 				return fail_response("distance");
 			}
 			if (seller.id == player.id) {
@@ -7523,7 +7505,7 @@ function init_io() {
 			if ((item.q || 1) < data.q) {
 				return fail_response("insufficient_q");
 			}
-			if (!can_add_item(player, create_new_item(item.name, data.q))) {
+			if (!commonFunctions.can_add_item(player, create_new_item(item.name, data.q))) {
 				return fail_response("no_space");
 			}
 			var price = item.price * data.q;
@@ -7563,12 +7545,12 @@ function init_io() {
 				merchant_xp_logic(seller, player, price, price - round(price * (1 - seller.tax)));
 			}
 
-			socket.emit("game_log", "Spent " + to_pretty_num(price) + " gold");
+			socket.emit("game_log", "Spent " + commonFunctions.to_pretty_num(price) + " gold");
 			seller.socket.emit(
 				"game_log",
-				"Sales tax " + to_pretty_num(price - round(price * (1 - seller.tax))) + " gold [" + seller.tax * 100 + "%]",
+				"Sales tax " + commonFunctions.to_pretty_num(price - round(price * (1 - seller.tax))) + " gold [" + seller.tax * 100 + "%]",
 			);
-			seller.socket.emit("game_log", "Received " + to_pretty_num(round(price * (1 - seller.tax))) + " gold");
+			seller.socket.emit("game_log", "Received " + commonFunctions.to_pretty_num(round(price * (1 - seller.tax))) + " gold");
 
 			xy_emit(seller, "ui", {
 				type: "+$$",
@@ -7627,13 +7609,13 @@ function init_io() {
 			if (!player) {
 				return;
 			}
-			data.a = max(0, parseInt(data.a) || 0);
-			data.b = max(0, parseInt(data.b) || 0);
+			data.a = commonFunctions.max(0, parseInt(data.a) || 0);
+			data.b = commonFunctions.max(0, parseInt(data.b) || 0);
 			if (data.a == data.b) {
 				return fail_response("invalid");
 			}
-			var a = min(data.a, data.b);
-			var b = max(data.a, data.b);
+			var a = commonFunctions.min(data.a, data.b);
+			var b = commonFunctions.max(data.a, data.b);
 			var a_item;
 			if (!(b < player.isize || b < player.items.length)) {
 				return fail_response("invalid");
@@ -7645,7 +7627,7 @@ function init_io() {
 			if (player.items[b] && player.items[b].name == "placeholder") {
 				return fail_response("item_placeholder");
 			}
-			if (can_stack(player.items[a], player.items[b])) {
+			if (commonFunctions.can_stack(player.items[a], player.items[b])) {
 				player.items[data.a].q = (player.items[a].q || 1) + (player.items[b].q || 1);
 				player.items[data.b] = null;
 				player.esize++;
@@ -7669,23 +7651,23 @@ function init_io() {
 			}
 			var success = {};
 			if (data.operation == "withdraw") {
-				var amount = max(0, min(parseInt(data.amount) || 0, player.user.gold));
+				var amount = commonFunctions.max(0, commonFunctions.min(parseInt(data.amount) || 0, player.user.gold));
 				player.user.gold -= amount;
 				player.gold += amount;
 				success = { response: "bank_withdraw", gold: amount, cevent: true };
 			}
 			if (data.operation == "deposit") {
-				var amount = max(0, min(parseInt(data.amount) || 0, player.gold));
+				var amount = commonFunctions.max(0, commonFunctions.min(parseInt(data.amount) || 0, player.gold));
 				player.user.gold += amount;
 				player.gold -= amount;
 				success = { response: "bank_store", gold: amount, cevent: true };
 			}
 			if (data.operation == "unlock") {
-				if (!bank_packs[data.pack]) {
+				if (!commonFunctions.bank_packs[data.pack]) {
 					return fail_response("invalid");
 				}
-				var gold = bank_packs[data.pack][1];
-				var shells = bank_packs[data.pack][2];
+				var gold = commonFunctions.bank_packs[data.pack][1];
+				var shells = commonFunctions.bank_packs[data.pack][2];
 				if (!gold) {
 					return fail_response("gold_not_enough");
 				}
@@ -7735,12 +7717,12 @@ function init_io() {
 			}
 			if (data.operation == "move") {
 				//within a .itemsN
-				if (!player.user[data.pack] || bank_packs[data.pack][0] != player.map) {
+				if (!player.user[data.pack] || commonFunctions.bank_packs[data.pack][0] != player.map) {
 					return fail_response("invalid");
 				}
 				server_log("storage move " + JSON.stringify(data));
-				data.a = max(0, min(41, parseInt(data.a) || 0));
-				data.b = max(0, min(41, parseInt(data.b) || 0));
+				data.a = commonFunctions.max(0, commonFunctions.min(41, parseInt(data.a) || 0));
+				data.b = commonFunctions.max(0, commonFunctions.min(41, parseInt(data.b) || 0));
 				if (data.a == data.b) {
 					return fail_response("invalid");
 				}
@@ -7750,7 +7732,7 @@ function init_io() {
 				if (player.user[data.pack][data.b] && player.user[data.pack][data.b].name == "placeholder") {
 					return fail_response("item_placeholder");
 				}
-				if (can_stack(player.user[data.pack][data.a], player.user[data.pack][data.b])) {
+				if (commonFunctions.can_stack(player.user[data.pack][data.a], player.user[data.pack][data.b])) {
 					player.user[data.pack][data.b].q =
 						(player.user[data.pack][data.a].q || 1) + (player.user[data.pack][data.b].q || 1);
 					player.user[data.pack][data.a] = null;
@@ -7765,7 +7747,7 @@ function init_io() {
 			if (data.operation == "swap") {
 				//between .items and a .itemsN
 				var operation = "swap";
-				if (!player.user[data.pack] || bank_packs[data.pack][0] != player.map) {
+				if (!player.user[data.pack] || commonFunctions.bank_packs[data.pack][0] != player.map) {
 					return fail_response("invalid");
 				}
 				data.str = parseInt(data.str);
@@ -7794,8 +7776,8 @@ function init_io() {
 					// if(data.str==-1) { socket.emit("game_log","Storage is full"); return; }
 				}
 				server_log("storage swap " + JSON.stringify(data));
-				data.str = max(0, min(41, parseInt(data.str) || 0));
-				data.inv = max(0, min(player.isize - 1, parseInt(data.inv) || 0));
+				data.str = commonFunctions.max(0, commonFunctions.min(41, parseInt(data.str) || 0));
+				data.inv = commonFunctions.max(0, commonFunctions.min(player.isize - 1, parseInt(data.inv) || 0));
 				var bank_item = player.user[data.pack][data.str];
 				var inv_item = player.items[data.inv];
 				if (inv_item && inv_item.name == "placeholder") {
@@ -7815,14 +7797,14 @@ function init_io() {
 					player.citems[data.inv] = cache_item(player.items[data.inv]);
 					success = { operation: "swap", pack: data.pack, inv: data.inv, str: data.str };
 				} else if (operation == "store" && inv_item) {
-					if (!can_add_item(player.user[data.pack], inv_item)) {
+					if (!commonFunctions.can_add_item(player.user[data.pack], inv_item)) {
 						return fail_response("storage_full");
 					}
 					player.items[data.inv] = player.citems[data.inv] = null;
 					const num = bank_add_item(player, data.pack, inv_item);
 					success = { operation: "swap", pack: data.pack, inv: data.inv, str: num };
 				} else if (operation == "pull" && bank_item) {
-					if (!can_add_item(player, bank_item)) {
+					if (!commonFunctions.can_add_item(player, bank_item)) {
 						return fail_response("inventory_full");
 					}
 					player.user[data.pack][data.str] = player.cuser[data.pack][data.str] = null;
@@ -7859,12 +7841,12 @@ function init_io() {
 				}
 				var x = parseFloat(data.x) || 0;
 				var y = parseFloat(data.y) || 0;
-				if (distance(player, { map: player.map, in: player.in, x: x, y: y }) > player.str * 3) {
+				if (commonFunctions.distance(player, { map: player.map, in: player.in, x: x, y: y }) > player.str * 3) {
 					fail_response("too_far");
 				}
 				consume_one(player, data.num);
 				if (item.name == "confetti") {
-					player.thrilling = future_s(20);
+					player.thrilling = commonFunctions.future_s(20);
 					xy_emit(
 						{ map: player.map, in: player.in, x: x, y: y },
 						"eval",
@@ -7872,7 +7854,7 @@ function init_io() {
 					);
 				}
 				if (item.name == "firecrackers") {
-					player.thrilling = future_s(200);
+					player.thrilling = commonFunctions.future_s(200);
 					xy_emit(
 						{ map: player.map, in: player.in, x: x, y: y },
 						"eval",
@@ -7883,7 +7865,7 @@ function init_io() {
 						if (
 							monster.target &&
 							is_same(player, get_player(monster.target), 1) &&
-							distance({ map: player.map, in: player.in, x: x, y: y }, monster) < 64
+							commonFunctions.distance({ map: player.map, in: player.in, x: x, y: y }, monster) < 64
 						) {
 							stop_pursuit(monster, { force: true, cause: "firecrackers" });
 						}
@@ -7893,7 +7875,7 @@ function init_io() {
 					xy_emit({ map: player.map, in: player.in, x: x, y: y }, "eval", "egg_splash(" + x + "," + y + ")");
 					for (var id in instances[player.in].monsters) {
 						var monster = instances[player.in].monsters[id];
-						if (!monster.target && distance({ map: player.map, in: player.in, x: x, y: y }, monster) < 32) {
+						if (!monster.target && commonFunctions.distance({ map: player.map, in: player.in, x: x, y: y }, monster) < 32) {
 							target_player(monster, player);
 						}
 					}
@@ -7952,11 +7934,11 @@ function init_io() {
 			}
 			if (data.slot) {
 				var item = player.slots[data.slot];
-				if (!item || in_arr(data.slot, trade_slots)) {
+				if (!item || commonFunctions.in_arr(data.slot, commonFunctions.trade_slots)) {
 					return;
 				}
 				if (item.name == "etherealamulet") {
-					if (player.last_ethereal && mssince(player.last_ethereal) < 120) {
+					if (player.last_ethereal && commonFunctions.mssince(player.last_ethereal) < 120) {
 						return socket.emit("game_response", "not_ready");
 					}
 					player.last_ethereal = new Date();
@@ -7977,17 +7959,17 @@ function init_io() {
 						player.tskin = "";
 						on = false;
 					} else if (item.level <= 1 && deduct_gender(player) == "female") {
-						player.tskin = random_one(["tf_green", "tf_pink"]);
+						player.tskin = commonFunctions.random_one(["tf_green", "tf_pink"]);
 					} else if (item.level == 2 && deduct_gender(player) == "female") {
-						player.tskin = random_one(["tf_blue", "tf_purple"]);
+						player.tskin = commonFunctions.random_one(["tf_blue", "tf_purple"]);
 					} else if (deduct_gender(player) == "female") {
 						player.tskin = "tf_orange";
 					} else if (item.level <= 1) {
-						player.tskin = random_one(["tm_gray", "tm_brown", "tm_white"]);
+						player.tskin = commonFunctions.random_one(["tm_gray", "tm_brown", "tm_white"]);
 					} else if (item.level == 2) {
-						player.tskin = random_one(["tm_green", "tm_yellow", "tm_purple"]);
+						player.tskin = commonFunctions.random_one(["tm_green", "tm_yellow", "tm_purple"]);
 					} else {
-						player.tskin = random_one(["tm_blue", "tm_red"]);
+						player.tskin = commonFunctions.random_one(["tm_blue", "tm_red"]);
 					}
 					player.tactivations = (player.tactivations || 0) + 1;
 				} else if (item.name == "darktristone") {
@@ -8048,7 +8030,7 @@ function init_io() {
 						var found = false;
 						for (var i = 0; i < 48; i++) {
 							var pack = "items" + i;
-							if (!bank_packs[pack] || player.user[pack]) {
+							if (!commonFunctions.bank_packs[pack] || player.user[pack]) {
 								continue;
 							}
 							found = true;
@@ -8073,7 +8055,7 @@ function init_io() {
 				return;
 			}
 			server_log("booster " + data.num + " " + data.action);
-			if (!item || !booster_items.includes(item.name)) {
+			if (!item || !commonFunctions.booster_items.includes(item.name)) {
 				return fail_response("invalid");
 			}
 			if (data.action == "activate" && !item.expires) {
@@ -8081,12 +8063,12 @@ function init_io() {
 				item.expires.setDate(item.expires.getDate() + 30 + (item.level || 0) * 2);
 				//item.expires.setMinutes(item.expires.getMinutes()+2);
 			} else if (data.action == "shift") {
-				if (!booster_items.includes(data.to)) {
+				if (!commonFunctions.booster_items.includes(data.to)) {
 					return fail_response("invalid");
 				}
 				player.xpm = player.goldm = player.luckm = 1;
 				item.name = data.to;
-				player.s.penalty_cd = { ms: min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 240, 120000) };
+				player.s.penalty_cd = { ms: commonFunctions.min(((player.s.penalty_cd && player.s.penalty_cd.ms) || 0) + 240, 120000) };
 			}
 			// if(item.expires) item.p="legacy";
 			player.citems[data.num] = cache_item(player.items[data.num]);
@@ -8109,7 +8091,7 @@ function init_io() {
 				return;
 			}
 			if (item.expires) {
-				amount = round(600 - (hsince(item.expires) * 100) / 24.0);
+				amount = round(600 - (commonFunctions.hsince(item.expires) * 100) / 24.0);
 			}
 			add_shells(player, amount, "convert");
 			player.items[data.num] = null;
@@ -8122,9 +8104,9 @@ function init_io() {
 				return;
 			}
 			if (!data.name) {
-				data.name = random_one(Object.keys(player.p.emx));
+				data.name = commonFunctions.random_one(Object.keys(player.p.emx));
 			}
-			if (player.last.emotion && mssince(player.last.emotion) < 2000) {
+			if (player.last.emotion && commonFunctions.mssince(player.last.emotion) < 2000) {
 				return socket.emit("game_response", "emotion_cooldown");
 			}
 			player.last.emotion = new Date();
@@ -8146,11 +8128,11 @@ function init_io() {
 			player.first = true;
 			G.skills.attack.cooldown = player.attack_ms;
 
-			if (is_disabled(player)) {
+			if (commonFunctions.is_disabled(player)) {
 				return fail_response("disabled", data.name);
 			}
 
-			if ((player.tskin == "konami" || is_silenced(player)) && data.name != "attack") {
+			if ((player.tskin == "konami" || commonFunctions.is_silenced(player)) && data.name != "attack") {
 				return fail_response("skill_cant_incapacitated", data.name);
 			}
 
@@ -8181,15 +8163,15 @@ function init_io() {
 				cooldown = gSkill.cooldown || gSkill.reuse_cooldown;
 				lastUse = player.last[data.name];
 			}
-			if (cooldown && lastUse && mssince(lastUse) < cooldown) {
+			if (cooldown && lastUse && commonFunctions.mssince(lastUse) < cooldown) {
 				return fail_response("cooldown", data.name, {
 					skill: data.name,
 					id: data.id,
-					ms: cooldown - mssince(lastUse),
+					ms: cooldown - commonFunctions.mssince(lastUse),
 				});
 			}
 
-			if (gSkill.class && !in_arr(player.type, gSkill.class) && player.role != "gm") {
+			if (gSkill.class && !commonFunctions.in_arr(player.type, gSkill.class) && player.role != "gm") {
 				return fail_response("skill_cant_use", data.name);
 			}
 
@@ -8197,8 +8179,8 @@ function init_io() {
 				let canUse;
 				if (!player.slots.mainhand) {
 					canUse = false;
-				} else if (is_array(gSkill.wtype)) {
-					canUse = in_arr(G.items[player.slots.mainhand.name].wtype, gSkill.wtype);
+				} else if (commonFunctions.is_array(gSkill.wtype)) {
+					canUse = commonFunctions.in_arr(G.items[player.slots.mainhand.name].wtype, gSkill.wtype);
 				} else {
 					canUse = G.items[player.slots.mainhand.name].wtype == gSkill.wtype;
 				}
@@ -8233,7 +8215,7 @@ function init_io() {
 					// TODO: Consider adding game_response, too
 					return socket.emit("disappear", { id: data.id, place: data.name, reason: "not_there" });
 				}
-				if (is_invis(target) || (!gSkill.global && distance(target, player) > B.max_vision)) {
+				if (is_invis(target) || (!gSkill.global && commonFunctions.distance(target, player) > B.max_vision)) {
 					// TODO: Consider adding game_response, too
 					return socket.emit("disappear", { id: data.id, place: data.name, reason: "not_there" });
 				}
@@ -8303,7 +8285,7 @@ function init_io() {
 					range += player.level;
 				}
 
-				const dist = distance(player, target);
+				const dist = commonFunctions.distance(player, target);
 				if (dist > range + player.xrange) {
 					return true;
 				}
@@ -8410,7 +8392,7 @@ function init_io() {
 						[24, 0, 2],
 						[0, 24, 0],
 					].forEach(function (m) {
-						if (is_point_inside([player.x + m[0], player.y + m[1]], zone.polygon)) {
+						if (commonFunctions.is_point_inside([player.x + m[0], player.y + m[1]], zone.polygon)) {
 							the_zone = zone;
 							direction = m[2];
 						}
@@ -8440,7 +8422,7 @@ function init_io() {
 				var x = parseFloat(data.x) || 0;
 				var y = parseFloat(data.y) || 0;
 				var point = true;
-				if (point_distance(player.x, player.y, x, y) > 50) {
+				if (commonFunctions.point_distance(player.x, player.y, x, y) > 50) {
 					point = false;
 					player.socket.emit("game_response", "dash_failed");
 					reject = { response: "data", place: data.name };
@@ -8453,7 +8435,7 @@ function init_io() {
 					if (!spot) {
 						spot = safe_xy_nearby(player.map, player.x + (x - player.x) * 0.6, player.y + (y - player.y) * 0.6);
 					}
-					if (!spot || point_distance(player.x, player.y, spot.x, spot.y) < 10) {
+					if (!spot || commonFunctions.point_distance(player.x, player.y, spot.x, spot.y) < 10) {
 						point = false;
 						player.socket.emit("game_response", "dash_failed");
 						reject = { response: "data", place: data.name };
@@ -8507,8 +8489,8 @@ function init_io() {
 				} else if (item.b) {
 					return fail_response("item_blocked", data.name);
 				}
-				var prop = calculate_item_properties(item);
-				var negative = in_arr(item.name, G.skills.throw.negative);
+				var prop = commonFunctions.calculate_item_properties(item);
+				var negative = commonFunctions.in_arr(item.name, G.skills.throw.negative);
 				for (const p of G.skills.throw.nprop) {
 					if (prop[p]) {
 						negative = true;
@@ -8533,7 +8515,7 @@ function init_io() {
 					if (target["1hp"]) {
 						damage = 1;
 					}
-					target.hp = max(1, target.hp - damage);
+					target.hp = commonFunctions.max(1, target.hp - damage);
 					disappearing_text({}, target, "-" + damage, { color: "red", xy: 1 });
 				}
 				consume_mp(player, gSkill.mp, target);
@@ -8614,7 +8596,7 @@ function init_io() {
 				consume_mp(player, gSkill.mp);
 				player.first_burst = true;
 				player.halt = true;
-				if (is_array(data.targets)) {
+				if (commonFunctions.is_array(data.targets)) {
 					// Only look at the first 16 targets in the array if more are provided
 					for (const t of data.targets.slice(0, 16)) {
 						const id = t[0];
@@ -8625,7 +8607,7 @@ function init_io() {
 						}
 						targeted[id] = true;
 
-						const mp = max(0, parseInt(t[1]) || 0);
+						const mp = commonFunctions.max(0, parseInt(t[1]) || 0);
 						if (mp <= 0) {
 							continue;
 						}
@@ -8688,7 +8670,7 @@ function init_io() {
 					var target = instances[player.in].players[id];
 					if (
 						!target.npc &&
-						distance(player, target, true) < gSkill.range &&
+						commonFunctions.distance(player, target, true) < gSkill.range &&
 						(!(G.maps[player.map].pvp || is_pvp) || is_same(player, target, 1))
 					) {
 						target.s[gSkill.condition] = { ms: gSkill.duration, f: player.name };
@@ -8702,7 +8684,7 @@ function init_io() {
 				const targeted = {};
 				let c_resolve = null;
 				//console.log(data.ids);
-				if (is_array(data.ids)) {
+				if (commonFunctions.is_array(data.ids)) {
 					// Only look at the first Xshot targets in the array if more are provided
 					for (const id of data.ids.slice(0, data.name === "5shot" ? 5 : 3)) {
 						// Prevent attacking the same entity twice
@@ -8764,7 +8746,7 @@ function init_io() {
 					} else if (target.type == "priest" || target.type == "mage") {
 						current.sound = "pm";
 					}
-					current.dist = distance(player, target);
+					current.dist = commonFunctions.distance(player, target);
 					if (current.dist < G.skills.track.range) {
 						list.push(current);
 					}
@@ -8787,7 +8769,7 @@ function init_io() {
 					if (target.target && !(get_player(target.target) && is_same(player, get_player(target.target), 1))) {
 						continue;
 					}
-					var dist = distance(player, target);
+					var dist = commonFunctions.distance(player, target);
 					if (dist < G.skills.agitate.range) {
 						if (target.target) {
 							stop_pursuit(target, { redirect: true, cause: "agitate redirect" });
@@ -8836,7 +8818,7 @@ function init_io() {
 				var reftarget = null;
 				for (var id in instances[player.in].monsters) {
 					var target = instances[player.in].monsters[id];
-					var dist = distance(player, target);
+					var dist = commonFunctions.distance(player, target);
 					if (dist < G.skills.stomp.range) {
 						if (target.immune) {
 							player.hitchhikers.push(["game_response", { response: "skill_immune", skill: data.name }]);
@@ -8851,7 +8833,7 @@ function init_io() {
 				if (is_in_pvp(player, 1)) {
 					for (var id in instances[player.in].players) {
 						var target = instances[player.in].players[id];
-						var dist = distance(player, target);
+						var dist = commonFunctions.distance(player, target);
 						if (dist < G.skills.stomp.range && !target.npc && !is_same(player, target, 1) && !target.s.invincible) {
 							if (add_condition(target, "stunned", { duration: G.skills.stomp.duration })) {
 								reftarget = target;
@@ -8920,7 +8902,7 @@ function init_io() {
 				var c_resolve = null;
 				for (var id in instances[player.in].monsters) {
 					var target = instances[player.in].monsters[id];
-					var dist = distance(player, target);
+					var dist = commonFunctions.distance(player, target);
 					if (dist < gSkill.range) {
 						attack = commence_attack(player, target, data.name);
 						if (!attack || !attack.projectile) {
@@ -8940,7 +8922,7 @@ function init_io() {
 				if (is_in_pvp(player, 1)) {
 					for (var id in instances[player.in].players) {
 						var target = instances[player.in].players[id];
-						var dist = distance(player, target);
+						var dist = commonFunctions.distance(player, target);
 						if (dist < gSkill.range && !target.npc && !is_same(player, target, 1)) {
 							attack = commence_attack(player, target, data.name);
 							if (!attack || !attack.projectile) {
@@ -8997,7 +8979,7 @@ function init_io() {
 				player.s.blink.x = spot.x;
 				player.s.blink.y = spot.y;
 				player.s.blink.d = 0;
-				if (in_arr(data.direction, [1, 2, 3])) {
+				if (commonFunctions.in_arr(data.direction, [1, 2, 3])) {
 					player.s.blink.d = data.direction;
 				}
 				if (player.role != "gm") {
@@ -9027,7 +9009,7 @@ function init_io() {
 				player.s.blink.x = spot.x;
 				player.s.blink.y = spot.y;
 				player.s.blink.d = 0;
-				if (in_arr(data.direction, [1, 2, 3])) {
+				if (commonFunctions.in_arr(data.direction, [1, 2, 3])) {
 					player.s.blink.d = data.direction;
 				}
 				if (player.role != "gm") {
@@ -9074,7 +9056,7 @@ function init_io() {
 					return socket.emit("game_response", { response: "no_mp", place: data.name, failed: true });
 				}
 				var mp = parseInt(data.mp) || 10000;
-				mp = max(1, min(player.mp, mp));
+				mp = commonFunctions.max(1, commonFunctions.min(player.mp, mp));
 				if (mp > target.max_mp - target.mp) {
 					mp = target.max_mp - target.mp;
 				}
@@ -9111,7 +9093,7 @@ function init_io() {
 					if (!player.items[i] || player.items[i].l) {
 						continue;
 					}
-					gold = calculate_item_value(player.items[i]);
+					gold = commonFunctions.calculate_item_value(player.items[i]);
 					consume_one(player, i);
 					break;
 				}
@@ -9155,7 +9137,7 @@ function init_io() {
 				if (
 					!G.maps[player.map].ref ||
 					!G.maps[player.map].ref[data.type] ||
-					distance(G.maps[player.map].ref[data.type], player, true) > 300
+					commonFunctions.distance(G.maps[player.map].ref[data.type], player, true) > 300
 				) {
 					return socket.emit("game_response", "distance");
 				}
@@ -9169,7 +9151,7 @@ function init_io() {
 				if (
 					!G.maps[player.map].ref ||
 					!G.maps[player.map].ref[data.type] ||
-					distance(G.maps[player.map].ref[data.type], player, true) > 40
+					commonFunctions.distance(G.maps[player.map].ref[data.type], player, true) > 40
 				) {
 					return socket.emit("game_response", "distance");
 				}
@@ -9190,7 +9172,7 @@ function init_io() {
 				player.s.magiport.map = "resort";
 				resend(player, "u+cid");
 			} else if (data.type == "dailytask") {
-				if (!G.maps.main.ref.dailytask || distance(G.maps.main.ref.dailytask, player, true) > 150) {
+				if (!G.maps.main.ref.dailytask || commonFunctions.distance(G.maps.main.ref.dailytask, player, true) > 150) {
 					return socket.emit("game_response", "distance");
 				}
 				player.p.monsterhunt = { ms: 60 * 60 * 1000, m: "goo" };
@@ -9202,14 +9184,14 @@ function init_io() {
 					if (player.konami.join("") == "uuddlrlrB") {
 						player.tskin = "konami";
 						resend(player, "u+cid");
-						if (!player.p.target_lock || !G.monsters[player.p.target_lock] || hsince(player.p.dt.last_tl) > 15 * 24) {
+						if (!player.p.target_lock || !G.monsters[player.p.target_lock] || commonFunctions.hsince(player.p.dt.last_tl) > 15 * 24) {
 							var monsters = [];
 							for (var name in G.monsters) {
 								if (!G.monsters[name].special && !G.monsters[name].stationary && G.monsters[name].c) {
 									monsters.push(name);
 								}
 							}
-							player.p.target_lock = random_one(monsters);
+							player.p.target_lock = commonFunctions.random_one(monsters);
 							player.p.dt.last_tl = new Date();
 						}
 						socket.emit("game_response", { response: "target_lock", monster: player.p.target_lock });
@@ -9229,7 +9211,7 @@ function init_io() {
 			a = parseFloat(data.x) || 0;
 			b = parseFloat(data.y) || 0;
 			// console.log(JSON.stringify(data));
-			socket.emit("game_log", "" + simple_distance({ x: player.x, y: player.y }, { x: a, y: b }));
+			socket.emit("game_log", "" + commonFunctions.simple_distance({ x: player.x, y: player.y }, { x: a, y: b }));
 		});
 		socket.on("move", function (data) {
 			// if(observers[socket.id]) observers[socket.id].x=data.x,observers[socket.id].y=data.y; Old observer code [17/02/17]
@@ -9250,7 +9232,7 @@ function init_io() {
 				}
 				player.konami.push(data.key[0]);
 			}
-			if (player && player.m == data.m && can_walk(player) && (x != player.x || y != player.y)) {
+			if (player && player.m == data.m && commonFunctions.can_walk(player) && (x != player.x || y != player.y)) {
 				// if(is_sdk) server_log("Player moving to: "+data.going_x+","+data.going_y);
 
 				// player.x=data.x; player.y=data.y; [03/08/16] Seems like a really bad idea to update x/y based on what players provide
@@ -9294,7 +9276,7 @@ function init_io() {
 				start_moving_element(player);
 				if (
 					!player.pet &&
-					simple_distance(player, { x: data.x, y: data.y }) > 132 &&
+					commonFunctions.simple_distance(player, { x: data.x, y: data.y }) > 132 &&
 					current == 0 &&
 					mode.lcorrection
 				) {
@@ -9325,11 +9307,11 @@ function init_io() {
 				return;
 			}
 			var r = { id: data.id, goldm: player.goldm, opener: player.name, items: [] };
-			if (chest && simple_distance(chest, player) > 400) {
+			if (chest && commonFunctions.simple_distance(chest, player) > 400) {
 				r.goldm = 1;
 				r.dry = true;
 			}
-			if (chest && msince(chest.date) > 8) {
+			if (chest && commonFunctions.msince(chest.date) > 8) {
 				r.goldm = 1;
 				r.stale = true;
 			}
@@ -9337,20 +9319,20 @@ function init_io() {
 				return fail_response("loot_failed");
 			}
 			try {
-				if (chest && player.owner && chest.owners && !in_arr(player.owner, chest.owners) && !W.chest[player.owner]) {
+				if (chest && player.owner && chest.owners && !commonFunctions.in_arr(player.owner, chest.owners) && !W.chest[player.owner]) {
 					W.chest[player.owner] = new Date();
 					server_log("SEVERE - Cross Loot from " + player.name + " not from " + chest.owners.toString());
 				}
 				if (chest && !player.party) {
 					var all_items = chest.items.slice(0);
 					all_items.concat(chest.pvp_items);
-					if (!can_add_items(player, all_items)) {
+					if (!commonFunctions.can_add_items(player, all_items)) {
 						return fail_response("loot_no_space");
 					}
 					if (chest && !chest.pvp && chest.gold > 100000000 && !player.stealth) {
 						broadcast("server_message", {
 							message:
-								player.name + " looted " + to_pretty_num(server_tax(round(chest.gold * r.goldm), true)) + " gold",
+								player.name + " looted " + commonFunctions.to_pretty_num(server_tax(round(chest.gold * r.goldm), true)) + " gold",
 							color: "gold",
 							type: "server_gold",
 							name: player.name,
@@ -9374,7 +9356,7 @@ function init_io() {
 					});
 					(chest.pvp_items || []).forEach(function (item) {
 						item.v = new Date();
-						if (can_add_item(player, item)) {
+						if (commonFunctions.can_add_item(player, item)) {
 							add_item(player, item, { found: 1, v: B.v });
 							reopen = true;
 							var ritem = cache_item(item);
@@ -9398,7 +9380,7 @@ function init_io() {
 						player.t.cgold += r.gold;
 					}
 					if (r.gold) {
-						socket.emit("game_log", { message: to_pretty_num(r.gold) + " gold", color: "gold" });
+						socket.emit("game_log", { message: commonFunctions.to_pretty_num(r.gold) + " gold", color: "gold" });
 					}
 					socket.emit("disappearing_text", {
 						message: "+" + r.gold,
@@ -9419,7 +9401,7 @@ function init_io() {
 					if (chest && !chest.pvp && chest.gold > 100000000 && !player.stealth) {
 						broadcast("server_message", {
 							message:
-								player.name + " looted " + to_pretty_num(server_tax(round(chest.gold * r.goldm), true)) + " gold",
+								player.name + " looted " + commonFunctions.to_pretty_num(server_tax(round(chest.gold * r.goldm), true)) + " gold",
 							color: "gold",
 							type: "server_gold",
 							name: player.name,
@@ -9435,7 +9417,7 @@ function init_io() {
 						var can = {};
 						parties[player.party].forEach(function (name) {
 							var current = players[name_to_id[name]];
-							if (current && can_add_item(current, item)) {
+							if (current && commonFunctions.can_add_item(current, item)) {
 								pool += current.share;
 								can[name] = true;
 							}
@@ -9483,7 +9465,7 @@ function init_io() {
 						var can = {};
 						parties[player.party].forEach(function (name) {
 							var current = players[name_to_id[name]];
-							if (current && current.share && can_add_item(current, item)) {
+							if (current && current.share && commonFunctions.can_add_item(current, item)) {
 								pool += current.share;
 								can[name] = true;
 							}
@@ -9534,7 +9516,7 @@ function init_io() {
 							current.t.cgold += cgold;
 						}
 						if (cgold) {
-							current.socket.emit("game_log", { message: to_pretty_num(cgold) + " gold", color: "gold" });
+							current.socket.emit("game_log", { message: commonFunctions.to_pretty_num(cgold) + " gold", color: "gold" });
 						}
 						if (current.in == player.in) {
 							current.socket.emit("disappearing_text", {
@@ -9552,7 +9534,7 @@ function init_io() {
 				}
 			} catch (e) {
 				delete chests[data.id]; // If this didn't exist, any exception would end up being a source for infinite gold and items
-				log_trace("#X chest_error", e);
+				commonFunctions.log_trace("#X chest_error", e);
 				return fail_response("error");
 			}
 		});
@@ -9573,7 +9555,7 @@ function init_io() {
 				socket.emit("game_error", "Can't accept more than " + max_players + " players at this time");
 				return;
 			}
-			socket.observer_secret = randomStr(24);
+			socket.observer_secret = commonFunctions.randomStr(24);
 			observers[socket.id].auth_engaged = true;
 			appengine_call(
 				"start_character",
@@ -9659,13 +9641,13 @@ function init_io() {
 					}
 					player.t = { mdamage: 0, cgold: 0, dgold: 0, xp: 0, start: new Date() };
 					player.hitchhikers = []; // socket events to be registered after a resend
-					player.last = { attack: future_ms(-1200), attacked: really_old };
+					player.last = { attack: commonFunctions.future_ms(-1200), attacked: commonFunctions.really_old };
 					player.bets = {};
 					player.base = dbase;
-					player.age = parseInt(ceil(hsince(new Date(player.created)) / 24.0));
+					player.age = parseInt(commonFunctions.ceil(commonFunctions.hsince(new Date(player.created)) / 24.0));
 					// player.vision=[round((data.width/2)/data.scale)+B.ext_vision,round((data.height/2)/data.scale)+B.ext_vision];
-					// player.vision[0]=min(1000,player.vision[0]);
-					// player.vision[1]=min(700,player.vision[1]);
+					// player.vision[0]=commonFunctions.min(1000,player.vision[0]);
+					// player.vision[1]=commonFunctions.min(700,player.vision[1]);
 					player.vision = B.vision;
 
 					if (!player.verified) {
@@ -9736,10 +9718,10 @@ function init_io() {
 						socket.disconnect();
 					} else {
 						var cdata = player_to_client(player);
-						player.ipass = cdata.ipass = randomStr(12);
+						player.ipass = cdata.ipass = commonFunctions.randomStr(12);
 						player.last_ipass = new Date();
-						player.last.attack = future_ms(-10000);
-						player.last.transport = future_ms(-10000);
+						player.last.attack = commonFunctions.future_ms(-10000);
+						player.last.transport = commonFunctions.future_ms(-10000);
 						cdata.home = player.p.home;
 						cdata.friends = player.friends;
 						cdata.acx = player.p.acx;
@@ -9774,12 +9756,12 @@ function init_io() {
 			}
 			if (data.item == "hp" || data.item == "mp") {
 				if (player.last.potion) {
-					const ms = -mssince(player.last.potion);
+					const ms = -commonFunctions.mssince(player.last.potion);
 					if (ms > 0) {
 						return fail_response("not_ready", { ms: ms });
 					}
 				}
-				player.last.potion = future_ms(4000);
+				player.last.potion = commonFunctions.future_ms(4000);
 				if (data.item == "hp") {
 					player.hp = Math.min(player.hp + 50, player.max_hp);
 					disappearing_text(socket, player, "+50", { color: "green", xy: 1, s: "hp", nohp: 1 });
@@ -9807,7 +9789,7 @@ function init_io() {
 				if (!friend) {
 					return fail_response("friend_rleft");
 				}
-				if (in_arr(friend.owner, player.friends) || friend.owner == player.owner) {
+				if (commonFunctions.in_arr(friend.owner, player.friends) || friend.owner == player.owner) {
 					return success_response("friend_already");
 				}
 				requests[player.name + "-" + friend.name] = { a: player.owner, b: friend.owner };
@@ -9895,7 +9877,7 @@ function init_io() {
 				}
 				delete challenges[challenger.name];
 				challenger.socket.emit("game_response", { response: "challenge_accepted", name: player.name });
-				var name = randomStr(20);
+				var name = commonFunctions.randomStr(20);
 				var a = [];
 				var b = [];
 				instance = create_instance(name, "duelland");
@@ -10155,7 +10137,7 @@ function init_io() {
 					return success_response({});
 				}
 				// if(player.party && player.party!=player.name) { socket.emit("game_log","Only the party leader can kick someone"); return; }
-				if (!in_arr(data.name, parties[player.party])) {
+				if (!commonFunctions.in_arr(data.name, parties[player.party])) {
 					socket.emit("party_update", { list: parties[player.party], party: party_to_client(player.party) });
 					return success_response({});
 				}
@@ -10240,21 +10222,21 @@ function init_io() {
 					transport_player_to(player, "goobrawl");
 				}
 			} else if (data.name == "crabxx" && events.crabxx) {
-				if (simple_distance(player, { map: "main", x: -1000, y: 1700 }) > 200) {
+				if (commonFunctions.simple_distance(player, { map: "main", x: -1000, y: 1700 }) > 200) {
 					transport_player_to(player, "main", [-1000, 1700, 0, 40]);
 				}
 			} else if (data.name == "franky" && events.franky) {
-				if (simple_distance(player, { map: "level2w", x: -300, y: 150 }) > 200) {
+				if (commonFunctions.simple_distance(player, { map: "level2w", x: -300, y: 150 }) > 200) {
 					transport_player_to(player, "level2w", [-300, 150, 0, 40]);
 				}
 			} else if (data.name == "icegolem" && events.icegolem) {
-				if (simple_distance(player, { map: "winterland", x: 820, y: 425 }) > 100) {
+				if (commonFunctions.simple_distance(player, { map: "winterland", x: 820, y: 425 }) > 100) {
 					transport_player_to(player, "winterland", [820, 425, 0, 10]);
 				}
 			} else if (data.name == "abtesting" && E.abtesting) {
 				if (player.map != "abtesting" || !player.team) {
 					if (
-						ssince(timers.abtesting_start) > 120 &&
+						commonFunctions.ssince(timers.abtesting_start) > 120 &&
 						(!player.p.abtesting || player.p.abtesting[0] != E.abtesting.id)
 					) {
 						return fail_response("join_too_late");
@@ -10263,7 +10245,7 @@ function init_io() {
 					if (player.p.abtesting && player.p.abtesting[0] == E.abtesting.id) {
 						player.team = player.p.abtesting[1];
 					} else {
-						player.team = random_one(["A", "B"]);
+						player.team = commonFunctions.random_one(["A", "B"]);
 					}
 
 					player.p.abtesting = [E.abtesting.id, player.team];
@@ -10331,7 +10313,7 @@ function init_io() {
 				return;
 			}
 			var npc = G.maps[player.map].ref.twitch;
-			if (!npc || simple_distance(npc, player) > 500) {
+			if (!npc || commonFunctions.simple_distance(npc, player) > 500) {
 				return socket.emit("game_response", "distance");
 			}
 			for (var name in player.s) {
@@ -10359,7 +10341,7 @@ function init_io() {
 					data.odds = "black";
 				}
 				data.odds = "" + data.odds;
-				data.gold = max(1, parseInt(data.gold) || 1);
+				data.gold = commonFunctions.max(1, parseInt(data.gold) || 1);
 				if (!tavern.roulette.odds[data.odds]) {
 					return;
 				}
@@ -10377,9 +10359,9 @@ function init_io() {
 				}
 
 				socket.emit("game_log", { message: "Bet accepted on " + data.odds, color: "white" });
-				socket.emit("game_log", { message: to_pretty_num(data.gold) + " gold", color: "gray" });
+				socket.emit("game_log", { message: commonFunctions.to_pretty_num(data.gold) + " gold", color: "gray" });
 
-				var rid = randomStr(10);
+				var rid = commonFunctions.randomStr(10);
 				player.gold -= data.gold;
 				player.bets[rid] = {
 					id: rid,
@@ -10395,20 +10377,20 @@ function init_io() {
 				resend(player, "reopen+nc");
 			}
 			if (data.type == "dice") {
-				// server_log(JSON.stringify(data));
-				var num = min(99.99, max(parseFloat(data.num) || 0, 0.01));
-				var gold = max(10000, min(parseInt(data.gold) || 0, 100000000000));
+
+				var num = commonFunctions.min(99.99, commonFunctions.max(parseFloat(data.num) || 0, 0.01));
+				var gold = commonFunctions.max(10000, commonFunctions.min(parseInt(data.gold) || 0, 100000000000));
 				var odds = 100.0 / num;
 				var dir = "down";
 				if (data.dir == "up") {
 					odds = 100.0 / (100 - num);
 					dir = "up";
 				}
-				odds = min(odds, 10000);
-				odds = parseFloat(floor_f2(odds));
+				odds = commonFunctions.min(odds, 10000);
+				odds = parseFloat(commonFunctions.floor_f2(odds));
 				var win = gold * odds;
 				var raw = win;
-				var edge = ceil(((gold * odds - gold) * house_edge()) / 100.0);
+				var edge = commonFunctions.ceil(((gold * odds - gold) * house_edge()) / 100.0);
 				win = parseInt(win);
 				edge = parseInt(edge);
 				if (tavern.dice.state == "roll") {
@@ -10429,9 +10411,9 @@ function init_io() {
 				// if(Object.keys(player.bets).length>=5) return socket.emit("game_response","tavern_too_many_bets");
 				// socket.emit("game_log",{"message":"Bet accepted on "+num.toFixed(2)+" "+dir.toUpperCase(),"color":"white"});
 				socket.emit("game_log", { message: "Num: " + num.toFixed(2) + " " + dir.toUpperCase(), color: "white" });
-				socket.emit("game_log", { message: "Bet: " + to_pretty_num(gold) + " gold", color: "gray" });
+				socket.emit("game_log", { message: "Bet: " + commonFunctions.to_pretty_num(gold) + " gold", color: "gray" });
 
-				var rid = randomStr(10);
+				var rid = commonFunctions.randomStr(10);
 				player.gold -= gold;
 				player.bets[rid] = {
 					id: rid,
@@ -10522,7 +10504,7 @@ function init_io() {
 			for (var id in players) {
 				var current = players[id];
 				var mapn = current.map;
-				current.age = parseInt(ceil(hsince(new Date(current.created)) / 24.0));
+				current.age = parseInt(commonFunctions.ceil(commonFunctions.hsince(new Date(current.created)) / 24.0));
 				if (is_pvp) {
 					mapn = "Unknown";
 					sdata.push({
@@ -10591,7 +10573,7 @@ function init_io() {
 			}
 			for (var id in instances[player.in].monsters || {}) {
 				var m = instances[player.in].monsters[id];
-				var c = distance(m, player, true);
+				var c = commonFunctions.distance(m, player, true);
 				if (c < min) {
 					min = c;
 					x = m;
@@ -10642,17 +10624,17 @@ function init_io() {
 				try {
 					defeat_player(player);
 				} catch (e) {
-					log_trace("#X DCERRORPVP", e);
+					commonFunctions.log_trace("#X DCERRORPVP", e);
 				}
 				// if(!server.live) { server_log('Ignoring the "disconnect" of '+player.name,1); return; }
 
 				try {
-					if (player.moving && distance(player, { x: player.going_x, y: player.going_y }) < 800) {
+					if (player.moving && commonFunctions.distance(player, { x: player.going_x, y: player.going_y }) < 800) {
 						player.x = player.going_x;
 						player.y = player.going_y;
 					}
 				} catch (e) {
-					log_trace("#X DCERRORM", e);
+					commonFunctions.log_trace("#X DCERRORM", e);
 				}
 				// to not get stuck on out-of-bounds corners
 
@@ -10661,13 +10643,13 @@ function init_io() {
 						leave_party(player.party, player);
 					}
 				} catch (e) {
-					log_trace("#X DCERROR1", e);
+					commonFunctions.log_trace("#X DCERROR1", e);
 				}
 
 				try {
 					xy_emit(player, "disappear", { id: player.id, reason: "disconnect" });
 				} catch (e) {
-					log_trace("#X DCERROR2", e);
+					commonFunctions.log_trace("#X DCERROR2", e);
 				}
 
 				server_log("Disconnected Player: " + socket.id + " " + player.name + " Calls: " + socket.total_calls, 1);
@@ -10678,7 +10660,7 @@ function init_io() {
 					}
 					player.bets = {};
 				} catch (e) {
-					log_trace("#X DCERRORBETS", e);
+					commonFunctions.log_trace("#X DCERRORBETS", e);
 				}
 
 				try {
@@ -10686,7 +10668,7 @@ function init_io() {
 						remove_monster(player.monster);
 					}
 				} catch (e) {
-					log_trace("#X DCERRORPETS", e);
+					commonFunctions.log_trace("#X DCERRORPETS", e);
 				}
 
 				try {
@@ -10697,13 +10679,13 @@ function init_io() {
 					}
 					pmap_remove(player);
 				} catch (e) {
-					log_trace("#X DCERROR3 ", e);
+					commonFunctions.log_trace("#X DCERROR3 ", e);
 				}
 
 				try {
 					restore_state(player, true);
 				} catch (e) {
-					log_trace("#X DCERRORrestore", e);
+					commonFunctions.log_trace("#X DCERRORrestore", e);
 				}
 
 				try {
@@ -10714,7 +10696,7 @@ function init_io() {
 						save_player(player);
 					}
 				} catch (e) {
-					log_trace("#X DCERROR", e);
+					commonFunctions.log_trace("#X DCERROR", e);
 				}
 			}
 			if (observer) {
@@ -10722,7 +10704,7 @@ function init_io() {
 				try {
 					delete_observer(socket);
 				} catch (e) {
-					log_trace("#X DCERRORO ", e);
+					commonFunctions.log_trace("#X DCERRORO ", e);
 				}
 			}
 		});
@@ -10930,14 +10912,14 @@ function level_monster(monster, args) {
 	if (mult > 0) {
 		monster.hp += parseInt(G.monsters[monster.type].hp / 2) * mult;
 	} else {
-		monster.hp = min(monster.hp, monster.max_hp);
+		monster.hp = commonFunctions.min(monster.hp, monster.max_hp);
 	}
 	monster.level += 1 * mult;
 	monster.u = true;
 	monster.abs = true;
 	monster.moving = false;
 	monster.cid++;
-	monster.last_level = future_s(Math.random() * 100 - 50);
+	monster.last_level = commonFunctions.future_s(Math.random() * 100 - 50);
 	if (mode.fast_mlevels) {
 		monster.last_level = new Date();
 	}
@@ -11038,7 +11020,7 @@ function new_monster(instance, map_def, args) {
 	monster.luckx = 1;
 	monster.xrange = 0;
 	if (map_def.stype == "randomrespawn") {
-		var boundary = map_def.boundaries[parseInt(floor(Math.random() * map_def.boundaries.length))];
+		var boundary = map_def.boundaries[parseInt(commonFunctions.floor(Math.random() * map_def.boundaries.length))];
 		if (!server.live) {
 			boundary = map_def.boundaries[0];
 		} // to prevent referencing un-created instances
@@ -11052,7 +11034,7 @@ function new_monster(instance, map_def, args) {
 		monster.width = G.dimensions[name][0];
 		monster.height = G.dimensions[name][1];
 	}
-	set_base(monster);
+	commonFunctions.set_base(monster);
 
 	if (map_def.random) {
 		var spot = random_place(instances[instance].map);
@@ -11075,10 +11057,10 @@ function new_monster(instance, map_def, args) {
 		monster.y = map_def.y;
 		monster.master = map_def.master;
 	} else if (map_def.polygon) {
-		var p = random_point(map_def.polygon, monster.base);
+		var p = commonFunctions.random_point(map_def.polygon, monster.base);
 		var times = 0;
 		while (!is_xy_safe(instances[instance].map, p[0], p[1])) {
-			p = random_point(map_def.polygon, monster.base);
+			p = commonFunctions.random_point(map_def.polygon, monster.base);
 			times++;
 			if (times > 40) {
 				break;
@@ -11136,9 +11118,9 @@ function new_monster(instance, map_def, args) {
 			monster[prop] = monster_def[prop];
 		}
 	});
-	monster.mp = ceil((monster.hp * 2) / 100);
+	monster.mp = commonFunctions.ceil((monster.hp * 2) / 100);
 	if (monster_def.s) {
-		monster.s = clone(monster_def.s);
+		monster.s = commonFunctions.clone(monster_def.s);
 	}
 	if (monster_def.abilities) {
 		monster.a = monster_def.abilities;
@@ -11169,12 +11151,12 @@ function new_monster(instance, map_def, args) {
 	monster.in = instance;
 	monster.map = instances[instance].map;
 	monster.map_def = map_def;
-	monster.last_level = future_s(Math.random() * 100 - 50);
+	monster.last_level = commonFunctions.future_s(Math.random() * 100 - 50);
 	if (mode.fast_mlevels) {
 		monster.last_level = new Date();
 	}
 	monster.last.attack = new Date();
-	monster.last.attacked = really_old;
+	monster.last.attacked = commonFunctions.really_old;
 	monster.hits = 0;
 	if (args.last_state) {
 		while (monster.level < args.last_state.level) {
@@ -11234,7 +11216,7 @@ function new_monster_f(instance, map_def, args) {
 		try {
 			new_monster(instance, map_def, args);
 		} catch (e) {
-			log_trace("#X Critical-new_monster", e);
+			commonFunctions.log_trace("#X Critical-new_monster", e);
 		}
 	};
 }
@@ -11250,7 +11232,7 @@ function start_moving_element(monster) {
 	monster.from_x = monster.x;
 	monster.from_y = monster.y;
 	monster.move_num = total_moves++;
-	calculate_vxy(monster);
+	commonFunctions.calculate_vxy(monster);
 }
 
 function send_xy_updates(player, list) {
@@ -11264,7 +11246,7 @@ function send_xy_updates(player, list) {
 	var m_mark = {};
 	var p_count = 0;
 	list.forEach(function (def) {
-		if (!is_invis(def.entity) && within_xy_range(player, def.entity) && player.id != def.entity.id) {
+		if (!is_invis(def.entity) && commonFunctions.within_xy_range(player, def.entity) && player.id != def.entity.id) {
 			if (def.entity.is_monster) {
 				if (player.push) {
 					m_mark[def.entity.id] = 1;
@@ -11296,7 +11278,7 @@ function send_xy_updates(player, list) {
 				continue;
 			}
 			var monster = instances[player.in].monsters[id];
-			if ((mode.novi || !within_xy_range(avoid, monster)) && within_xy_range(grab, monster)) {
+			if ((mode.novi || !commonFunctions.within_xy_range(avoid, monster)) && commonFunctions.within_xy_range(grab, monster)) {
 				data.monsters.push(monster_to_client(monster));
 				p_count++;
 			}
@@ -11310,7 +11292,7 @@ function send_xy_updates(player, list) {
 				continue;
 			}
 			var monster = instances[player.in].players[id];
-			if ((mode.novi || !within_xy_range(avoid, monster)) && within_xy_range(grab, monster)) {
+			if ((mode.novi || !commonFunctions.within_xy_range(avoid, monster)) && commonFunctions.within_xy_range(grab, monster)) {
 				data.players.push(player_to_client(monster, 1));
 				p_count++;
 			}
@@ -11343,7 +11325,7 @@ function step_out_of_invis(player) {
 }
 
 function reduce_targets(player, monster) {
-	if (is_string(player)) {
+	if (commonFunctions.is_string(player)) {
 		player = players[name_to_id[player]];
 	}
 	if (!player) {
@@ -11387,7 +11369,7 @@ function increase_targets(player, monster) {
 }
 
 function port_monster(monster, target, extras) {
-	if (is_disabled(monster)) {
+	if (commonFunctions.is_disabled(monster)) {
 		return false;
 	}
 	var spot = safe_xy_nearby(target.map, target.x - 8, target.y - 6);
@@ -11437,7 +11419,7 @@ function stop_pursuit(monster, args) {
 				instances[monster.in].monsters[monster.master] &&
 				instances[monster.in].monsters[monster.master].cooperative
 			) {
-				add_coop_points(instances[monster.in].monsters[monster.master], target, max(monster.hp, 300));
+				add_coop_points(instances[monster.in].monsters[monster.master], target, commonFunctions.max(monster.hp, 300));
 			}
 		}
 		reduce_targets(target, monster);
@@ -11448,7 +11430,7 @@ function stop_pursuit(monster, args) {
 	if (is_sdk && args && args.cause) {
 		console.log("stop_pursuit: " + args.cause);
 	}
-	monster.last_level = future_s(Math.random() * 100 - 50);
+	monster.last_level = commonFunctions.future_s(Math.random() * 100 - 50);
 	monster.cid++;
 	monster.u = true;
 	monster.irregular = 2;
@@ -11462,11 +11444,11 @@ function defeated_by_a_monster(attacker, player) {
 	if (is_in_pvp(player) && !(!is_pvp && G.maps[player.map].safe_pvp)) {
 		divider = 10;
 	}
-	var lost_xp = floor(min(max((player.max_xp * 0.01) / divider, (player.xp * 0.02) / divider), player.xp));
+	var lost_xp = commonFunctions.floor(commonFunctions.min(commonFunctions.max((player.max_xp * 0.01) / divider, (player.xp * 0.02) / divider), player.xp));
 	// Originally all of them are divided by player.xpm [05/06/19]
 	for (var i = 0; i < player.isize; i++) {
 		if (player.items[i] && player.items[i].name == "xptome") {
-			lost_xp = floor(lost_xp / 50);
+			lost_xp = commonFunctions.floor(lost_xp / 50);
 			consume_one(player, i);
 			player.socket.emit("game_log", { message: "A tome fades away", color: "#B5C09C" });
 			break;
@@ -11482,7 +11464,7 @@ function defeated_by_a_monster(attacker, player) {
 	}
 	rip(player);
 	if (gameplay == "hardcore") {
-		player.level = max(1, player.level - 1);
+		player.level = commonFunctions.max(1, player.level - 1);
 		player.xp = 0;
 	}
 	lost_xp /= 12;
@@ -11505,23 +11487,23 @@ function defeated_by_a_monster(attacker, player) {
 }
 
 function can_attack(monster, player) {
-	if (is_disabled(monster)) {
+	if (commonFunctions.is_disabled(monster)) {
 		return false;
 	}
 	if (player == "aggro") {
 		return (
-			mssince(monster.last_aggro) > max(1200, 1200 / monster.frequency) &&
-			mssince(monster.last.attack) > 1000 / monster.frequency
+			commonFunctions.mssince(monster.last_aggro) > commonFunctions.max(1200, 1200 / monster.frequency) &&
+			commonFunctions.mssince(monster.last.attack) > 1000 / monster.frequency
 		);
 	} //aggro check is arbitrary
 	if (!player) {
-		return mssince(monster.last.attack) > 1000 / monster.frequency;
+		return commonFunctions.mssince(monster.last.attack) > 1000 / monster.frequency;
 	}
-	return distance(player, monster, true) < monster.range && mssince(monster.last.attack) > 1000 / monster.frequency;
+	return commonFunctions.distance(player, monster, true) < monster.range && commonFunctions.mssince(monster.last.attack) > 1000 / monster.frequency;
 }
 
 function rage_logic(instance) {
-	if (!instance.rage_list.length || (instance.last_rage && mssince(instance.last_rage) < 4200)) {
+	if (!instance.rage_list.length || (instance.last_rage && commonFunctions.mssince(instance.last_rage) < 4200)) {
 		return;
 	}
 	instance.last_rage = new Date();
@@ -11567,7 +11549,7 @@ function update_instance(instance) {
 		return;
 	}
 	instance.operators = 0;
-	var ms = mssince(instance.last_update);
+	var ms = commonFunctions.mssince(instance.last_update);
 	instance.last_update = new Date();
 	rage_logic(instance);
 	var to_push = [];
@@ -11584,7 +11566,7 @@ function update_instance(instance) {
 			instance.operators += 1;
 		}
 		var focus = instance.monsters[monster.focus];
-		if ((monster.focus && !instance.monsters[monster.focus]) || (focus && distance(monster, focus) > 380)) {
+		if ((monster.focus && !instance.monsters[monster.focus]) || (focus && commonFunctions.distance(monster, focus) > 380)) {
 			focus = monster.focus = null;
 			monster.cid++;
 			monster.u = true;
@@ -11599,7 +11581,7 @@ function update_instance(instance) {
 			var value = monster.s[name].ms;
 			monster.s[name].ms -= ms;
 			if (def && def.interval) {
-				if (!monster.s[name].last || mssince(monster.s[name].last) >= def.interval) {
+				if (!monster.s[name].last || commonFunctions.mssince(monster.s[name].last) >= def.interval) {
 					monster.s[name].last = new Date();
 					if (name == "eburn") {
 						var damage = G.conditions.eburn.damage;
@@ -11607,7 +11589,7 @@ function update_instance(instance) {
 							damage = 0;
 						}
 						disappearing_text({}, monster, "-" + damage, { color: "red", xy: 1 });
-						monster.hp = max(1, monster.hp - damage);
+						monster.hp = commonFunctions.max(1, monster.hp - damage);
 					}
 					if (name == "eheal") {
 						var heal = G.conditions.eheal.heal;
@@ -11615,12 +11597,12 @@ function update_instance(instance) {
 							heal = 0;
 						}
 						disappearing_text({}, monster, "+" + heal, { color: "heal", xy: 1 });
-						monster.hp = min(monster.max_hp, monster.hp + heal);
+						monster.hp = commonFunctions.min(monster.max_hp, monster.hp + heal);
 					}
 					if (name == "burned") {
-						var damage = ceil(ref.intensity / 5);
+						var damage = commonFunctions.ceil(ref.intensity / 5);
 						//disappearing_text({},monster,"-"+damage,{color:"burn",xy:1});
-						monster.hp = max(0, monster.hp - damage);
+						monster.hp = commonFunctions.max(0, monster.hp - damage);
 						xy_emit(monster, "hit", {
 							source: "burn",
 							hid: ref.f,
@@ -11653,7 +11635,7 @@ function update_instance(instance) {
 				} else {
 					delete monster.s[name];
 				}
-				if (is_disabled(monster) && G.skills[name] && !G.skills[name].passive) {
+				if (commonFunctions.is_disabled(monster) && G.skills[name] && !G.skills[name].passive) {
 					continue;
 				}
 				if (name != "young") {
@@ -11667,14 +11649,14 @@ function update_instance(instance) {
 					if (monster.s.poisoned) {
 						heal /= 2;
 					}
-					monster.hp = min(monster.max_hp, monster.hp + heal);
+					monster.hp = commonFunctions.min(monster.max_hp, monster.hp + heal);
 					if (hp != monster.hp) {
 						events.push(["ui", { type: "mheal", id: id, heal: monster.hp - hp }]);
 					}
 				}
 				if (name == "healing") {
 					var target = monster;
-					if (focus && distance(focus, monster) < 120) {
+					if (focus && commonFunctions.distance(focus, monster) < 120) {
 						target = focus;
 					}
 					var hp = target.hp;
@@ -11682,7 +11664,7 @@ function update_instance(instance) {
 					if (target.s.poisoned) {
 						heal /= 2;
 					}
-					target.hp = min(target.max_hp, target.hp + heal);
+					target.hp = commonFunctions.min(target.max_hp, target.hp + heal);
 					if (hp != target.hp) {
 						events.push(["ui", { type: "mheal", id: target.id, heal: target.hp - hp }]);
 					}
@@ -11698,14 +11680,14 @@ function update_instance(instance) {
 					if (monster.cooperative) {
 						for (var name in monster.points || {}) {
 							var player = get_player(name);
-							if (player && simple_distance(monster, player) < 480) {
+							if (player && commonFunctions.simple_distance(monster, player) < 480) {
 								commence_attack(monster, player, "fireball");
 							}
 						}
 					} else {
 						for (var id in instances[monster.in].players) {
 							var player = instances[monster.in].players[id];
-							if (distance(player, monster) < 480) {
+							if (commonFunctions.distance(player, monster) < 480) {
 								commence_attack(monster, player, "fireball");
 							}
 						}
@@ -11717,7 +11699,7 @@ function update_instance(instance) {
 				if (name == "multi_freeze") {
 					for (var name in monster.points || {}) {
 						var player = get_player(name);
-						if (player && simple_distance(monster, player) < 480) {
+						if (player && commonFunctions.simple_distance(monster, player) < 480) {
 							commence_attack(monster, player, "frostball");
 						}
 					}
@@ -11738,7 +11720,7 @@ function update_instance(instance) {
 				if (name == "zap") {
 					for (var id in instances[monster.in].players) {
 						var player = instances[monster.in].players[id];
-						if (distance(player, monster) < monster.a[name].radius) {
+						if (commonFunctions.distance(player, monster) < monster.a[name].radius) {
 							commence_attack(monster, player, "zap");
 						}
 					}
@@ -11746,7 +11728,7 @@ function update_instance(instance) {
 				if (monster.a && monster.a[name] && monster.a[name].aura) {
 					for (var id in instances[monster.in].players) {
 						var player = instances[monster.in].players[id];
-						if (distance(player, monster) < monster.a[name].radius) {
+						if (commonFunctions.distance(player, monster) < monster.a[name].radius) {
 							player.s[monster.a[name].condition] = { ms: G.conditions[monster.a[name].condition].duration };
 							resend(player, "u+cid");
 						}
@@ -11756,11 +11738,11 @@ function update_instance(instance) {
 					var c = [];
 					for (var id in instances[monster.in].players) {
 						var player = instances[monster.in].players[id];
-						if (!player.rip && !player.invis && distance(player, monster) < monster.a[name].radius && !player.npc) {
+						if (!player.rip && !player.invis && commonFunctions.distance(player, monster) < monster.a[name].radius && !player.npc) {
 							c.push(player);
 						}
 					}
-					var theone = random_one(c);
+					var theone = commonFunctions.random_one(c);
 					if (theone) {
 						commence_attack(monster, theone, "deepfreeze");
 					}
@@ -11769,11 +11751,11 @@ function update_instance(instance) {
 					var c = [];
 					for (var id in instances[monster.in].players) {
 						var player = instances[monster.in].players[id];
-						if (!player.rip && !player.invis && distance(player, monster) < monster.a[name].radius) {
+						if (!player.rip && !player.invis && commonFunctions.distance(player, monster) < monster.a[name].radius) {
 							c.push(player);
 						}
 					}
-					var theone = random_one(c);
+					var theone = commonFunctions.random_one(c);
 					if (theone) {
 						if (monster.target && get_player(monster.target)) {
 							stop_pursuit(monster, { cause: "anger" });
@@ -11785,7 +11767,7 @@ function update_instance(instance) {
 					var dampened = false;
 					for (var id in instances[monster.in].monsters) {
 						var m = instances[monster.in].monsters[id];
-						if (m.type == "fieldgen0" && point_distance(monster.x, monster.y, m.x, m.y) < 300) {
+						if (m.type == "fieldgen0" && commonFunctions.point_distance(monster.x, monster.y, m.x, m.y) < 300) {
 							monster.s.dampened = { ms: 2000 };
 							dampened = true;
 						}
@@ -11794,11 +11776,11 @@ function update_instance(instance) {
 						var c = [];
 						for (var id in instances[monster.in].players) {
 							var player = instances[monster.in].players[id];
-							if (!player.rip && !player.invis && distance(player, monster) < monster.a[name].radius) {
+							if (!player.rip && !player.invis && commonFunctions.distance(player, monster) < monster.a[name].radius) {
 								c.push(player);
 							}
 						}
-						var theone = random_one(c);
+						var theone = commonFunctions.random_one(c);
 						if (theone) {
 							if (monster.target && get_player(monster.target)) {
 								stop_pursuit(monster, { cause: "warpstomp" });
@@ -11827,7 +11809,7 @@ function update_instance(instance) {
 					if (ref.stomp) {
 						for (var id in instances[monster.in].players) {
 							var target = instances[monster.in].players[id];
-							var dist = simple_distance(monster, target);
+							var dist = commonFunctions.simple_distance(monster, target);
 							if (
 								dist < 160 &&
 								!target.npc &&
@@ -11859,7 +11841,7 @@ function update_instance(instance) {
 					!m.focus &&
 					m != monster &&
 					G.monsters[monster.type].humanoid == G.monsters[m.type].humanoid &&
-					distance(m, monster) < 300
+					commonFunctions.distance(m, monster) < 300
 				) {
 					monster.focus = m.id;
 					change = true;
@@ -11883,14 +11865,14 @@ function update_instance(instance) {
 				set_ghash(aggressives, monster, 32);
 			}
 		}
-		if (monster.target && monster.spawns && get_player(monster.target) && !is_disabled(monster)) {
+		if (monster.target && monster.spawns && get_player(monster.target) && !commonFunctions.is_disabled(monster)) {
 			monster.spawns.forEach(function (spi) {
 				var interval = spi[0];
 				var name = spi[1];
-				if (!monster.last[name] || mssince(monster.last[name]) > interval) {
-					var pname = random_one(Object.keys(monster.points));
+				if (!monster.last[name] || commonFunctions.mssince(monster.last[name]) > interval) {
+					var pname = commonFunctions.random_one(Object.keys(monster.points));
 					var player = get_player(pname);
-					if (!player || player.npc || distance(monster, player) > 400) {
+					if (!player || player.npc || commonFunctions.distance(monster, player) > 400) {
 						return;
 					}
 					if (!is_same(player, get_player(monster.target), true)) {
@@ -11914,11 +11896,11 @@ function update_instance(instance) {
 		}
 		function attack_target_or_move() {
 			var player = players[name_to_id[monster.target]];
-			if (player && ssince(monster.last.attacked) > 20 && Math.random() > monster.rage * 0.99) {
+			if (player && commonFunctions.ssince(monster.last.attacked) > 20 && Math.random() > monster.rage * 0.99) {
 				stop_pursuit(monster, { force: true, cause: "bored" });
 				return;
 			}
-			if (focus && distance(focus, monster) > 40 && !monster.moving) {
+			if (focus && commonFunctions.distance(focus, monster) > 40 && !monster.moving) {
 				if (mode.all_smart) {
 					if (!monster.worker) {
 						monster.working = true;
@@ -11938,7 +11920,7 @@ function update_instance(instance) {
 					monster.ogoing_y = monster.going_y;
 					monster.going_x = monster.x + (focus.x - monster.x) / 2;
 					monster.going_y = monster.y + (focus.y - monster.y) / 2;
-					if (mode.path_checks && !can_move(monster)) {
+					if (mode.path_checks && !commonFunctions.can_move(monster)) {
 						monster.going_x = monster.ogoing_x;
 						monster.going_y = monster.ogoing_y;
 					} else {
@@ -11948,8 +11930,8 @@ function update_instance(instance) {
 			}
 			if (player && player.in == monster.in && !player.rip && !is_invis(player)) {
 				if (
-					distance(player, monster, true) >
-						min(monster.range / 1.6, 240) + min(100, monster.attack / 5.0) + 160 + ((mode.all_smart && 320) || 1) &&
+					commonFunctions.distance(player, monster, true) >
+						commonFunctions.min(monster.range / 1.6, 240) + commonFunctions.min(100, monster.attack / 5.0) + 160 + ((mode.all_smart && 320) || 1) &&
 					!monster.walk_once
 				) {
 					stop_pursuit(monster, { cause: "exceeds_range" });
@@ -11959,7 +11941,7 @@ function update_instance(instance) {
 						events.push(...attack.events);
 					}
 				} else if (
-					distance(monster, player, true) > 12 &&
+					commonFunctions.distance(monster, player, true) > 12 &&
 					!mode.range_test &&
 					!(mode.all_smart && monster.moving) &&
 					!focus
@@ -11984,10 +11966,10 @@ function update_instance(instance) {
 						monster.ogoing_y = monster.going_y;
 						monster.going_x = monster.x + (player.x - monster.x) / 2;
 						monster.going_y = monster.y + (player.y - monster.y) / 2;
-						if (mode.path_checks && !can_move(monster)) {
+						if (mode.path_checks && !commonFunctions.can_move(monster)) {
 							monster.going_x = monster.ogoing_x;
 							monster.going_y = monster.ogoing_y;
-							if (monster.attack < 120 || distance(monster, player, true) > monster.range) {
+							if (monster.attack < 120 || commonFunctions.distance(monster, player, true) > monster.range) {
 								stop_pursuit(monster, { cause: "cant_move" });
 							}
 						} else {
@@ -12004,11 +11986,11 @@ function update_instance(instance) {
 			}
 		}
 		if (monster.moving) {
-			var ms = mssince(monster.last.move);
-			ms = min(ms, 2000); // to prevent monsters from jumping off the map when the machine sleeps
+			var ms = commonFunctions.mssince(monster.last.move);
+			ms = commonFunctions.min(ms, 2000); // to prevent monsters from jumping off the map when the machine sleeps
 			monster.x += (monster.vx * ms) / 1000.0;
 			monster.y += (monster.vy * ms) / 1000.0;
-			stop_logic(monster);
+			commonFunctions.stop_logic(monster);
 			monster.last.move = new Date();
 			xy_u_logic(monster);
 
@@ -12016,7 +11998,7 @@ function update_instance(instance) {
 				attack_target_or_move();
 			}
 		} else if (monster.s.sleeping || monster.working) {
-		} else if (can_walk(monster)) {
+		} else if (commonFunctions.can_walk(monster)) {
 			// for the .s.stunned check
 			if (monster.s.magiport) {
 			} else if (monster.target || focus) {
@@ -12027,7 +12009,7 @@ function update_instance(instance) {
 					var radius = monster.map_def.radius;
 					var dx = Math.random() * radius - radius / 2;
 					var dy = Math.random() * radius - radius / 2;
-					if (abs(dx) + abs(dy) < 80) {
+					if (commonFunctions.abs(dx) + commonFunctions.abs(dy) < 80) {
 						// optimization to prevent short walks
 						if (dx < 0 && dx > -60) {
 							dx = -60;
@@ -12093,7 +12075,7 @@ function update_instance(instance) {
 						monster.going_x = monster.x + move[0] * d;
 						monster.going_y = monster.y + move[1] * d;
 						if (tries > 1 && monster.map_def.polygon) {
-							if (is_point_inside([monster.going_x, monster.going_y], monster.map_def.polygon)) {
+							if (commonFunctions.is_point_inside([monster.going_x, monster.going_y], monster.map_def.polygon)) {
 								break;
 							} else {
 								monster.rmove++;
@@ -12102,7 +12084,7 @@ function update_instance(instance) {
 						}
 					}
 					// console.log(monster.rmove+","+monster.dmove+" "+monster.going_x+","+monster.going_y);
-					if (can_move(monster)) {
+					if (commonFunctions.can_move(monster)) {
 						start_moving_element(monster);
 						monster.dmove = 0;
 					} else {
@@ -12117,7 +12099,7 @@ function update_instance(instance) {
 					var map_def = monster.map_def;
 					var to_move = true;
 					if (map_def.polygon) {
-						var p = random_point(map_def.polygon, monster.base);
+						var p = commonFunctions.random_point(map_def.polygon, monster.base);
 						monster.going_x = p[0];
 						monster.going_y = p[1];
 					} else {
@@ -12134,11 +12116,11 @@ function update_instance(instance) {
 						if (monster.in != monster.oin) {
 							port_monster(monster, { map: monster.oin, x: monster.going_x, y: monster.going_y, in: monster.oin });
 						} else {
-							recalculate_move(monster);
+							commonFunctions.recalculate_move(monster);
 						}
 						monster.irregular = 1;
 					} else if (monster.irregular == 1) {
-						if (!can_move(monster)) {
+						if (!commonFunctions.can_move(monster)) {
 							monster.m++;
 							server_log("Irregular1 respawn: " + monster.id);
 							setTimeout(new_monster_f(monster.oin, monster.map_def, { last_state: monster }), 500);
@@ -12173,20 +12155,20 @@ function update_instance(instance) {
 			var value = player.s[name].ms;
 			player.s[name].ms -= ms;
 			if (def && def.interval) {
-				if (!player.s[name].last || mssince(player.s[name].last) >= def.interval) {
+				if (!player.s[name].last || commonFunctions.mssince(player.s[name].last) >= def.interval) {
 					player.s[name].last = new Date();
 					if (name == "eburn") {
 						disappearing_text(player.socket, player, "-50", { color: "red", xy: 1 });
-						player.hp = max(1, player.hp - 50);
+						player.hp = commonFunctions.max(1, player.hp - 50);
 					}
 					if (name == "eheal") {
 						disappearing_text(player.socket, player, "+50", { color: "heal", xy: 1 });
-						player.hp = min(player.max_hp, player.hp + 50);
+						player.hp = commonFunctions.min(player.max_hp, player.hp + 50);
 					}
 					if (name == "burned") {
-						var damage = ceil(ref.intensity / 5);
+						var damage = commonFunctions.ceil(ref.intensity / 5);
 						disappearing_text(player.socket, player, "-" + damage, { color: "red", xy: 1 });
-						player.hp = max(0, player.hp - damage);
+						player.hp = commonFunctions.max(0, player.hp - damage);
 						xy_emit(player, "hit", {
 							source: "burn",
 							hid: ref.fid,
@@ -12199,8 +12181,8 @@ function update_instance(instance) {
 					resend(player, "u+cid+nc");
 				}
 			}
-			if (in_arr(name, ["damage_received"])) {
-				player.s[name].amount = max(0, (player.s[name].amount * (4000 - ms)) / 4000.0);
+			if (commonFunctions.in_arr(name, ["damage_received"])) {
+				player.s[name].amount = commonFunctions.max(0, (player.s[name].amount * (4000 - ms)) / 4000.0);
 			}
 			if (player.s[name].ms <= 0) {
 				delete player.s[name];
@@ -12216,7 +12198,7 @@ function update_instance(instance) {
 					var dampened = false;
 					for (var id in instances[ref.in].monsters) {
 						var m = instances[ref.in].monsters[id];
-						if (m.type == "fieldgen0" && point_distance(ref.x, ref.y, m.x, m.y) < 300) {
+						if (m.type == "fieldgen0" && commonFunctions.point_distance(ref.x, ref.y, m.x, m.y) < 300) {
 							xy_emit(player, "ui", { type: "dampened", name: player.name });
 							dampened = true;
 							break;
@@ -12266,15 +12248,15 @@ function update_instance(instance) {
 						def.nums[2] = parseInt(player.p.u_roll * 100) % 10;
 						change = true;
 					}
-					if (value < min(3000, ref.len * 0.3) && def.nums[3] === undefined) {
+					if (value < commonFunctions.min(3000, ref.len * 0.3) && def.nums[3] === undefined) {
 						def.nums[3] = parseInt(player.p.u_roll * 10);
 						change = true;
 					}
-					if (value < min(2200, ref.len * 0.22) && player.p.u_item && !player.p.u_fail && !def.success) {
+					if (value < commonFunctions.min(2200, ref.len * 0.22) && player.p.u_item && !player.p.u_fail && !def.success) {
 						def.success = true;
 						change = true;
 					}
-					if (value < min(2200, ref.len * 0.22) && (player.p.u_itemx || player.p.u_fail) && !def.failure) {
+					if (value < commonFunctions.min(2200, ref.len * 0.22) && (player.p.u_itemx || player.p.u_fail) && !def.failure) {
 						def.failure = true;
 						change = true;
 					}
@@ -12344,10 +12326,10 @@ function update_instance(instance) {
 								up: item.extra || undefined,
 							},
 						]);
-						if (calculate_item_value(item) + (def.edge || 0) * 2000000 > 1800000 && !player.stealth) {
+						if (commonFunctions.calculate_item_value(item) + (def.edge || 0) * 2000000 > 1800000 && !player.stealth) {
 							broadcast("server_message", {
 								message: player.name + " received " + item_to_phrase(item),
-								color: colors.server_success,
+								color: commonFunctions.colors.server_success,
 								item: cache_item(item),
 								type: "server_csuccess",
 								name: player.name,
@@ -12366,10 +12348,10 @@ function update_instance(instance) {
 							"game_response",
 							{ response: "compound_fail", level: item.level, num: data.num, stale: ref.stale },
 						]);
-						if (calculate_item_value(item) + (def.edge || 0) * 2000000 > 920000 && !player.stealth) {
+						if (commonFunctions.calculate_item_value(item) + (def.edge || 0) * 2000000 > 920000 && !player.stealth) {
 							broadcast("server_message", {
 								message: player.name + " lost " + item_to_phrase(item) + "'s",
-								color: colors.server_failure,
+								color: commonFunctions.colors.server_failure,
 								item: cache_item(item),
 								type: "server_cfail",
 								name: player.name,
@@ -12425,10 +12407,10 @@ function update_instance(instance) {
 							"game_response",
 							{ response: "upgrade_success", level: new_level, num: ref.num, stale: ref.stale },
 						]);
-						if (announce && calculate_item_value(item) > 4800000 && !player.stealth) {
+						if (announce && commonFunctions.calculate_item_value(item) > 4800000 && !player.stealth) {
 							broadcast("server_message", {
 								message: player.name + " received " + item_to_phrase(item),
-								color: colors.server_success,
+								color: commonFunctions.colors.server_success,
 								item: cache_item(item),
 								type: "server_usuccess",
 								name: player.name,
@@ -12441,10 +12423,10 @@ function update_instance(instance) {
 							"game_response",
 							{ response: "upgrade_fail", level: new_level, num: ref.num, stale: ref.stale },
 						]);
-						if (announce && calculate_item_value(item) > 4800000 && !player.stealth) {
+						if (announce && commonFunctions.calculate_item_value(item) > 4800000 && !player.stealth) {
 							broadcast("server_message", {
 								message: player.name + " lost " + item_to_phrase(item),
-								color: colors.server_failure,
+								color: commonFunctions.colors.server_failure,
 								item: cache_item(item),
 								type: "server_ufail",
 								name: player.name,
@@ -12466,11 +12448,11 @@ function update_instance(instance) {
 						player.gold += gold;
 						S.gold -= gold;
 						broadcast("server_message", {
-							message: player.name + " received " + to_pretty_num(gold) + " gold",
+							message: player.name + " received " + commonFunctions.to_pretty_num(gold) + " gold",
 							color: "gold",
 						});
 						player.socket.emit("game_response", "slots_success");
-						player.socket.emit("game_log", { message: "Received " + to_pretty_num(gold) + " gold", color: "gold" });
+						player.socket.emit("game_log", { message: "Received " + commonFunctions.to_pretty_num(gold) + " gold", color: "gold" });
 						// resend(player,"u+cid");
 					} else {
 						player.socket.emit("game_response", "slots_fail");
@@ -12493,10 +12475,10 @@ function update_instance(instance) {
 					var target = get_player(ref.target);
 					if (!target) {
 						player.socket.emit("game_response", { response: "pick_failed", cevent: true, reason: "player_gone" });
-					} else if (distance(player, target) > 20) {
+					} else if (commonFunctions.distance(player, target) > 20) {
 						player.socket.emit("game_response", { response: "pick_failed", cevent: true, reason: "distance" });
 					} else {
-						var num = floor(Math.random() * 42);
+						var num = commonFunctions.floor(Math.random() * 42);
 						if (target.items[num] && target.items[num].v) {
 							var item = target.items[num];
 							if (item.q && item.q > 1) {
@@ -12525,8 +12507,8 @@ function update_instance(instance) {
 						}
 						consume_skill(player, "fishing", true);
 						if (player.slots.mainhand) {
-							var prop = calculate_item_properties(player.slots.mainhand);
-							if (prop.breaks && Math.random() < max(0, prop.breaks / 100.0)) {
+							var prop = commonFunctions.calculate_item_properties(player.slots.mainhand);
+							if (prop.breaks && Math.random() < commonFunctions.max(0, prop.breaks / 100.0)) {
 								player.cid++;
 								player.u = true;
 								player.cslots.mainhand = player.slots.mainhand = null;
@@ -12547,8 +12529,8 @@ function update_instance(instance) {
 						}
 						consume_skill(player, "mining", true);
 						if (player.slots.mainhand) {
-							var prop = calculate_item_properties(player.slots.mainhand);
-							if (prop.breaks && Math.random() < max(0, prop.breaks / 100.0)) {
+							var prop = commonFunctions.calculate_item_properties(player.slots.mainhand);
+							if (prop.breaks && Math.random() < commonFunctions.max(0, prop.breaks / 100.0)) {
 								player.cid++;
 								player.u = true;
 								player.cslots.mainhand = player.slots.mainhand = null;
@@ -12583,7 +12565,7 @@ function update_instance(instance) {
 			resend(player, "reopen+u+cid");
 		}
 		if (player.moving) {
-			var ms = mssince(player.last.move);
+			var ms = commonFunctions.mssince(player.last.move);
 			player.x += (player.vx * ms) / 1000.0;
 			player.y += (player.vy * ms) / 1000.0;
 			player.red_zone *= 0.99;
@@ -12592,9 +12574,8 @@ function update_instance(instance) {
 				if (current === undefined) {
 					current = 8;
 				}
-				current = max(0, current - 1); // 1 is the new 0 [01/08/18]
+				current = commonFunctions.max(0, current - 1); // 1 is the new 0 [01/08/18]
 				player.red_zone += current;
-				// console.log(player.red_zone);
 				if (player.red_zone > smap_edge) {
 					player.red_zone = 0;
 					player.hp -= parseInt(player.hp / 2 + 1000);
@@ -12609,8 +12590,7 @@ function update_instance(instance) {
 					resend(player, "u+cid");
 				}
 			}
-			stop_logic(player);
-			// if(!player.moving) player.check_x=player.x,player.check_y=player.y,player.checked_xy=false;
+			commonFunctions.stop_logic(player);
 			player.last.move = new Date();
 			xy_u_logic(player);
 			xy_upush_logic(player);
@@ -12624,7 +12604,7 @@ function update_instance(instance) {
 			//#GTODO: calculate an angle + compare against monster's .angle before attacking
 			var l = get_nearby_ghash(aggressives, player, 32);
 			l.forEach(function (monster) {
-				if (is_in_front(monster, player) && can_attack(monster, player)) {
+				if (commonFunctions.is_in_front(monster, player) && can_attack(monster, player)) {
 					if (Math.random() < player.aggro_diff) {
 						return;
 					}
@@ -12662,7 +12642,7 @@ function update_instance(instance) {
 				var player = players[id_to_id[id]];
 				if (player && !player.npc) {
 					disappearing_text(player.socket, player, "-50", { color: "red", xy: 1 });
-					player.hp = max(0, player.hp - 50);
+					player.hp = commonFunctions.max(0, player.hp - 50);
 					player_rip_logic(player);
 					resend(player, "u+cid");
 				}
@@ -12670,7 +12650,7 @@ function update_instance(instance) {
 		} else if (trap.type == "debuff") {
 			for (var id in instance.players) {
 				var player = instance.players[id];
-				if (is_point_inside([player.x, player.y], trap.polygon)) {
+				if (commonFunctions.is_point_inside([player.x, player.y], trap.polygon)) {
 					// player.s["debuffaura"]={"ms":200,"name":"Debuff","skin":"citizens","citizens":true,"speed":-40};
 					add_condition(player, "slowness", { duration: 200 });
 					resend(player, "u+cid");
@@ -12750,27 +12730,27 @@ function instance_loop() {
 
 		for (name in instances) {
 			var instance = instances[name];
-			if (mssince(instance.last_update) > 75) {
+			if (commonFunctions.mssince(instance.last_update) > 75) {
 				update_instance(instance);
 			}
 		}
 
-		ms_since = mssince(now_date);
+		ms_since = commonFunctions.mssince(now_date);
 		if (ms_since > B.instance_loop_log_edge) {
-			server_log("Instance loop took " + mssince(now_date) + "ms", 1);
+			server_log("Instance loop took " + commonFunctions.mssince(now_date) + "ms", 1);
 		}
 		perfc.instance_loop[ms_since] = (perfc.instance_loop[ms_since] || 0) + 1;
 		perfc.instance_loops += 1;
-		var mss_since = mssince(last_iloop);
+		var mss_since = commonFunctions.mssince(last_iloop);
 		perfc.instance_delay[mss_since] = (perfc.instance_delay[mss_since] || 0) + 1;
 		if (mss_since / 1000 > 15) {
 			console.log("Sleep detected: " + mss_since / 1000);
 		}
 		last_iloop = new Date();
 	} catch (e) {
-		log_trace("#X Instance loop error", e);
+		commonFunctions.log_trace("#X Instance loop error", e);
 	}
-	setTimeout(instance_loop, max(75, min(1000, ms_since * 2 + 2)));
+	setTimeout(instance_loop, commonFunctions.max(75, commonFunctions.min(1000, ms_since * 2 + 2)));
 }
 
 function npc_loop() {
@@ -12794,13 +12774,13 @@ function npc_loop() {
 				instances[npc.in] &&
 				instances[npc.in].players &&
 				def.aura &&
-				(!npc.last_aura || mssince(npc.last_aura) > 2000)
+				(!npc.last_aura || commonFunctions.mssince(npc.last_aura) > 2000)
 			) {
 				npc.last_aura = new Date();
 				for (var pid in instances[npc.in].players) {
 					var player = instances[npc.in].players[pid];
 					// console.log(player);
-					if (!player.npc && distance(player, npc) < 320) {
+					if (!player.npc && commonFunctions.distance(player, npc) < 320) {
 						player.s[npc.ntype + "aura"] = { ms: 6000, name: "Citizen's Aura", skin: "citizens", citizens: true };
 						for (var p in def.aura) {
 							player.s[npc.ntype + "aura"][p] = def.aura[p];
@@ -12809,10 +12789,10 @@ function npc_loop() {
 					}
 				}
 			}
-			if (def.attack && ssince(npc.last.attack) > 1.5) {
+			if (def.attack && commonFunctions.ssince(npc.last.attack) > 1.5) {
 				for (var id in instances[npc.in].monsters) {
 					var monster = instances[npc.in].monsters[id];
-					if (distance(npc, monster) < npc.range) {
+					if (commonFunctions.distance(npc, monster) < npc.range) {
 						//  && monster.hp>5000
 						npc.last.attack = new Date();
 						commence_attack(npc, monster, "attack");
@@ -12891,14 +12871,14 @@ function npc_loop() {
 				[-0.8, 0.8],
 			];
 			var multiplier = npc.steps;
-			shuffle(moves);
-			if (def.aura && G.maps[npc.map].ref.transporter && distance(npc, G.maps[npc.map].ref.transporter) < 2000) {
+			commonFunctions.shuffle(moves);
+			if (def.aura && G.maps[npc.map].ref.transporter && commonFunctions.distance(npc, G.maps[npc.map].ref.transporter) < 2000) {
 				delay = -2400;
 				multiplier *= 4;
 			} else if (def.aura) {
 				delay *= 3;
 			}
-			if (!npc.citizen || npc.moving || npc.last.move > future_ms(delay) || instances[npc.in].paused) {
+			if (!npc.citizen || npc.moving || npc.last.move > commonFunctions.future_ms(delay) || instances[npc.in].paused) {
 				continue;
 			}
 			if (Math.random() < 0.3) {
@@ -12910,7 +12890,7 @@ function npc_loop() {
 			if (def.heal) {
 				for (var id in instances[npc.in].players) {
 					var player = instances[npc.in].players[id];
-					if (distance(player, npc) < 320 && player.hp < player.max_hp) {
+					if (commonFunctions.distance(player, npc) < 320 && player.hp < player.max_hp) {
 						commence_attack(npc, player, "partyheal");
 					}
 				}
@@ -12918,12 +12898,12 @@ function npc_loop() {
 
 			if (npc.focus) {
 				var target = get_player(npc.focus);
-				if (!target || distance(target, npc) < 30) {
+				if (!target || commonFunctions.distance(target, npc) < 30) {
 					continue;
 				}
 				npc.going_x = (npc.x + target.x) / 2;
 				npc.going_y = (npc.y + target.y) / 2;
-				if (!can_move(npc)) {
+				if (!commonFunctions.can_move(npc)) {
 					npc.going_x = npc.x + moves[0][0] * multiplier;
 					npc.going_y = npc.y + moves[0][1] * multiplier;
 				}
@@ -12940,7 +12920,7 @@ function npc_loop() {
 					npc.going_y < npc.boundary[1] ||
 					npc.going_y > npc.boundary[3])
 			) {
-			} else if (can_move(npc)) {
+			} else if (commonFunctions.can_move(npc)) {
 				npc.u = true;
 				start_moving_element(npc);
 				// server_log("Moving to "+npc.going_x+","+npc.going_y);
@@ -12950,11 +12930,11 @@ function npc_loop() {
 				npc.last.move = new Date();
 			}
 		}
-		ms_since = mssince(now_date);
+		ms_since = commonFunctions.mssince(now_date);
 	} catch (e) {
-		log_trace("#X NPC loop error", e);
+		commonFunctions.log_trace("#X NPC loop error", e);
 	}
-	setTimeout(npc_loop, max(28, min(1000, ms_since * 2 + 2))); // originally 24
+	setTimeout(npc_loop, commonFunctions.max(28, commonFunctions.min(1000, ms_since * 2 + 2))); // originally 24
 }
 
 function game_loop() {
@@ -12965,11 +12945,7 @@ function game_loop() {
 	var ms_since = 32;
 	try {
 		var now_date = new Date();
-		// for(name in instances)
-		// {
-		// 	var instance=instances[name];
-		// 	if(mssince(instance.last_update)>75) update_instance(instance);
-		// }
+
 		for (var id in server.s) {
 			server.s[id].ms -= 10;
 			if (server.s[id].ms < 0) {
@@ -12977,16 +12953,16 @@ function game_loop() {
 			}
 		}
 
-		ms_since = mssince(now_date);
+		ms_since = commonFunctions.mssince(now_date);
 		if (ms_since > B.game_loop_log_edge) {
-			server_log("Main loop took " + mssince(now_date) + "ms", 1);
+			server_log("Main loop took " + commonFunctions.mssince(now_date) + "ms", 1);
 		}
 		perfc.game_loop[ms_since] = (perfc.game_loop[ms_since] || 0) + 1;
 		perfc.game_loops += 1;
 	} catch (e) {
-		log_trace("#X Main loop error", e);
+		commonFunctions.log_trace("#X Main loop error", e);
 	}
-	setTimeout(game_loop, max(28, min(1000, ms_since * 2 + 2))); // originally 24
+	setTimeout(game_loop, commonFunctions.max(28, commonFunctions.min(1000, ms_since * 2 + 2))); // originally 24
 }
 
 var lrid = 0;
@@ -13003,7 +12979,7 @@ function aura_loop() {
 					if (!is_same(instances[player.in].players[pid], player, 3)) {
 						continue;
 					}
-					if (distance(instances[player.in].players[pid], player) > 200) {
+					if (commonFunctions.distance(instances[player.in].players[pid], player) > 200) {
 						continue;
 					}
 					instances[player.in].players[pid].s[aid] = { ms: G.conditions[aid].duration || 30000, f: player.name };
@@ -13015,7 +12991,7 @@ function aura_loop() {
 			}
 		}
 	} catch (e) {
-		log_trace("#X aura loop error", e);
+		commonFunctions.log_trace("#X aura loop error", e);
 	}
 	setTimeout(aura_loop, 1000);
 }
@@ -13032,7 +13008,7 @@ setInterval(function () {
 			var observer = observers[id];
 			if (observer.player && get_player(observer.player.name)) {
 				var player = get_player(observer.player.name);
-				if (simple_distance(observer, player) > 200) {
+				if (commonFunctions.simple_distance(observer, player) > 200) {
 					transport_observer_to(
 						observer,
 						player.in,
@@ -13042,7 +13018,7 @@ setInterval(function () {
 					);
 				}
 			} else {
-				if (simple_distance(observer, { map: observer_map, in: observer_map, x: observer_x, y: observer_y }) > 200) {
+				if (commonFunctions.simple_distance(observer, { map: observer_map, in: observer_map, x: observer_x, y: observer_y }) > 200) {
 					transport_observer_to(
 						observer,
 						observer_map,
@@ -13054,7 +13030,7 @@ setInterval(function () {
 			}
 		}
 	} catch (e) {
-		log_trace("#X observer loop2 error", e);
+		commonFunctions.log_trace("#X observer loop2 error", e);
 	}
 }, 13200);
 
@@ -13072,7 +13048,7 @@ setInterval(function () {
 				!player.npc &&
 				player.last.attack &&
 				player.map == player.in &&
-				ssince(player.last.attack) < 3 &&
+				commonFunctions.ssince(player.last.attack) < 3 &&
 				!G.maps[player.map].pvp
 			) {
 				names.push(player.name);
@@ -13082,7 +13058,7 @@ setInterval(function () {
 			}
 		}
 		if (names.length) {
-			player = get_player(names[floor(Math.random() * names.length)]);
+			player = get_player(names[commonFunctions.floor(Math.random() * names.length)]);
 			observer_map = player.map;
 			observer_x = parseInt(player.x);
 			observer_y = parseInt(player.y);
@@ -13093,7 +13069,7 @@ setInterval(function () {
 			observer_y = merchant_y;
 		}
 	} catch (e) {
-		log_trace("#X observer loop error", e);
+		commonFunctions.log_trace("#X observer loop error", e);
 	}
 }, 4000);
 
@@ -13116,7 +13092,7 @@ setTimeout(
 						}
 						xp = parseInt(Math.round(xp));
 						player.xp += xp;
-						player.socket.emit("game_log", "Gained " + to_pretty_num(xp) + " marketing XP");
+						player.socket.emit("game_log", "Gained " + commonFunctions.to_pretty_num(xp) + " marketing XP");
 						player.socket.emit("disappearing_text", {
 							message: "+" + xp,
 							x: player.x,
@@ -13135,7 +13111,7 @@ setTimeout(
 
 setInterval(function () {
 	try {
-		var edge = future_s(-120);
+		var edge = commonFunctions.future_s(-120);
 		for (var id in players) {
 			if (0 && players[id].last_ipass < edge) {
 				players[id].ban = "ipass";
@@ -13144,7 +13120,7 @@ setInterval(function () {
 			}
 		}
 	} catch (e) {
-		log_trace("#X ipass loop error", e);
+		commonFunctions.log_trace("#X ipass loop error", e);
 	}
 }, 132000);
 
@@ -13159,7 +13135,7 @@ setTimeout(function () {
 					!instance.operators &&
 					Object.keys(instance.players).length <= instance.npcs &&
 					!Object.keys(instance.observers).length &&
-					ssince(instance.last_player) > 50
+					commonFunctions.ssince(instance.last_player) > 50
 				) {
 					pause_instance(instance);
 				}
@@ -13168,7 +13144,7 @@ setTimeout(function () {
 				}
 			}
 		} catch (e) {
-			log_trace("#X pause loop error", e);
+			commonFunctions.log_trace("#X pause loop error", e);
 		}
 	}, 2000);
 }, 60000); // delay for a minute, so citizens move around
@@ -13179,7 +13155,7 @@ setInterval(function () {
 			send_party_update(oname);
 		}
 	} catch (e) {
-		log_trace("#X party loop error", e);
+		commonFunctions.log_trace("#X party loop error", e);
 	}
 }, 60000);
 
@@ -13189,7 +13165,7 @@ setInterval(function () {
 			var player = players[id];
 			players[id].pdps *= 0.8;
 			player.p.minutes++;
-			trade_slots.forEach(function (slot) {
+			commonFunctions.trade_slots.forEach(function (slot) {
 				if (player.slots[slot] && player.slots[slot].giveaway) {
 					player.slots[slot].giveaway--;
 					if (!player.slots[slot].giveaway) {
@@ -13206,7 +13182,7 @@ setInterval(function () {
 							player.slots[slot].giveaway = 5;
 						} else {
 							if (!mode.prevent_external) {
-								var winner = random_one(list);
+								var winner = commonFunctions.random_one(list);
 								var item = player.slots[slot];
 								player.slots[slot] = null;
 								delete item.list;
@@ -13232,7 +13208,7 @@ setInterval(function () {
 											player.name +
 											"'s giveaway. Participants were: " +
 											list.map((e) => e.name).join(", "),
-										rid: randomStr(50),
+										rid: commonFunctions.randomStr(50),
 										retries: 5,
 										item: mitem,
 									},
@@ -13242,7 +13218,7 @@ setInterval(function () {
 									},
 								);
 							} else {
-								var winner = random_one(list);
+								var winner = commonFunctions.random_one(list);
 								var item = player.slots[slot];
 								player.slots[slot] = null;
 								delete item.list;
@@ -13267,7 +13243,7 @@ setInterval(function () {
 			});
 		}
 	} catch (e) {
-		log_trace("#X decay loop error", e);
+		commonFunctions.log_trace("#X decay loop error", e);
 	}
 }, 60000);
 
@@ -13278,7 +13254,7 @@ setInterval(function () {
 			a_score[id] *= 0.99;
 		}
 	} catch (e) {
-		log_trace("#X ascore loop error", e);
+		commonFunctions.log_trace("#X ascore loop error", e);
 	}
 }, 10000);
 
@@ -13286,10 +13262,10 @@ setInterval(function () {
 	try {
 		for (var id in players) {
 			var player = players[id];
-			player.xrange = min(25, player.xrange + 5);
+			player.xrange = commonFunctions.min(25, player.xrange + 5);
 		}
 	} catch (e) {
-		log_trace("#X xrange loop error", e);
+		commonFunctions.log_trace("#X xrange loop error", e);
 	}
 }, 1000);
 
@@ -13319,14 +13295,14 @@ setInterval(function () {
 			}
 			if (player.p.first && !player.p.dt.first) {
 				realm_broadcast("server_message", { message: player.name + " joined Adventure Land!", color: "#24A2FA" });
-				player.p.dt.first = future_h(24 * 7);
+				player.p.dt.first = commonFunctions.future_h(24 * 7);
 			} else if (player.p.dt.first && player.p.dt.first > c) {
 				player.paura = player.paura || {};
 				player.paura["newcomersblessing"] = { attr0: 0, attr1: 0 };
 			}
 		}
 	} catch (e) {
-		log_trace("#X first_character loop error", e);
+		commonFunctions.log_trace("#X first_character loop error", e);
 	}
 }, 4000);
 
@@ -13340,7 +13316,7 @@ function projectiles_loop() {
 				complete_attack(projectile.attacker, projectile.target, projectile);
 			}
 		} catch (e) {
-			log_trace("#X projectile loop error", e);
+			commonFunctions.log_trace("#X projectile loop error", e);
 		}
 	}
 }
@@ -13372,7 +13348,7 @@ setInterval(function () {
 					mult = 20;
 				}
 				if (
-					mssince(monster.last_level) > max((180000 * exp * mult) / accel, (monster.max_hp * mult * 30 * exp) / accel)
+					commonFunctions.mssince(monster.last_level) > commonFunctions.max((180000 * exp * mult) / accel, (monster.max_hp * mult * 30 * exp) / accel)
 				) {
 					if (monster.temp) {
 						remove_monster(monster);
@@ -13383,7 +13359,7 @@ setInterval(function () {
 			}
 		}
 	} catch (e) {
-		log_trace("#X mlevel loop error", e);
+		commonFunctions.log_trace("#X mlevel loop error", e);
 	}
 }, 16000 / accel);
 
@@ -13401,13 +13377,13 @@ setInterval(function () {
 				}
 				monster.extra_gold =
 					(monster.extra_gold || 0) +
-					((min(min(2400, target.attack) / 220.0 + monster.attack / 1.2, 55) + 19) *
+					((commonFunctions.min(commonFunctions.min(2400, target.attack) / 220.0 + monster.attack / 1.2, 55) + 19) *
 						((gameplay == "hardcore" && 100) || 1)) /
-						(max((target.targets - 1) * (target.targets - 1), 1) || 1);
+						(commonFunctions.max((target.targets - 1) * (target.targets - 1), 1) || 1);
 			}
 		}
 	} catch (e) {
-		log_trace("#X mgold loop error", e);
+		commonFunctions.log_trace("#X mgold loop error", e);
 	}
 }, 2000);
 
@@ -13418,7 +13394,7 @@ setInterval(function () {
 			if (Math.random() < 1.0 / (6 * 15)) {
 				// once every 15 hours
 				var slots = [];
-				character_slots.forEach(function (slot) {
+				commonFunctions.character_slots.forEach(function (slot) {
 					if (
 						player.slots[slot] &&
 						(G.items[player.slots[slot].name].upgrade || G.items[player.slots[slot].name].compound)
@@ -13429,7 +13405,7 @@ setInterval(function () {
 				if (!slots.length) {
 					continue;
 				}
-				var slot = random_one(slots);
+				var slot = commonFunctions.random_one(slots);
 				player.slots[slot].grace = (player.slots[slot].grace || 0) + 0.4;
 				console.log("random grace " + player.name + " " + slot + " " + player.slots[slot].grace);
 			}
@@ -13456,7 +13432,7 @@ setInterval(function () {
 			}
 		}
 	} catch (e) {
-		log_trace("#X random grace loop error", e);
+		commonFunctions.log_trace("#X random grace loop error", e);
 	}
 }, 10 * 60000); // every 10 minutes
 
@@ -13465,7 +13441,7 @@ setInterval(
 		try {
 			server_loot();
 		} catch (e) {
-			log_trace("#X server loot error", e);
+			commonFunctions.log_trace("#X server loot error", e);
 		}
 	},
 	4 * 60 * 60 * 1000,
@@ -13477,27 +13453,27 @@ setInterval(function () {
 			broadcast_e();
 		}
 	} catch (e) {
-		log_trace("#X broadcast error", e);
+		commonFunctions.log_trace("#X broadcast error", e);
 	}
 }, 24 * 1000);
 
 function sync_loop() {
 	function check_for_delays(player) {
 		var limit = 6;
-		if (player.mounting && msince(player.mounting) > limit && !player.mount_issue) {
+		if (player.mounting && commonFunctions.msince(player.mounting) > limit && !player.mount_issue) {
 			server_log("#X SEVERE: " + limit + " minutes and still mounting: " + player.name, 1);
 			player.mount_issue = new Date();
 		}
-		if (player.unmounting && msince(player.unmounting) > limit && !player.unmount_issue) {
+		if (player.unmounting && commonFunctions.msince(player.unmounting) > limit && !player.unmount_issue) {
 			server_log("#X SEVERE: " + limit + " minutes and still unmounting: " + player.name, 1);
 			player.unmount_issue = new Date();
 		}
-		if (player.sync_call && msince(player.last_sync) > limit && !player.sync_issue) {
+		if (player.sync_call && commonFunctions.msince(player.last_sync) > limit && !player.sync_issue) {
 			server_log("#X SEVERE: " + limit + " minutes and still syncing: " + player.name, 1);
 			// player.sync_issue=new Date();
 			delete player.sync_call;
 		}
-		if (player.stopping && msince(player.stopping) > limit && !player.stop_issue) {
+		if (player.stopping && commonFunctions.msince(player.stopping) > limit && !player.stop_issue) {
 			server_log("#X SEVERE: " + limit + " minutes and still stopping: " + player.name, 1);
 			player.stop_issue = new Date();
 		}
@@ -13620,7 +13596,7 @@ function sync_loop() {
 				character: player.real_id,
 				data: player_to_server(player),
 				user_data: player.user || "",
-				retries: CINF,
+				retries: commonFunctions.CINF,
 				suffix: "/" + player.name,
 			},
 			function (result) {
@@ -13662,11 +13638,11 @@ function sync_loop() {
 				unmount_call(player);
 			} else if (player.mounting) {
 				mount_call(player);
-			} else if (msince(player.last_sync) > 5 && !player.unmounting && !player.mounting) {
+			} else if (commonFunctions.msince(player.last_sync) > 5 && !player.unmounting && !player.mounting) {
 				sync_call(player);
 			}
 		} catch (e) {
-			log_trace("#X dc loop error1", e);
+			commonFunctions.log_trace("#X dc loop error1", e);
 		}
 	}
 	for (var id in dc_players) {
@@ -13682,18 +13658,18 @@ function sync_loop() {
 				stop_call(player);
 			}
 		} catch (e) {
-			log_trace("#X dc loop error2", e);
+			commonFunctions.log_trace("#X dc loop error2", e);
 		}
 	}
 }
 
 function server_loop() {
 	// #IMPORTANT: sometimes none of the success/error callbacks trigger [20/08/19]
-	if (server.update_call && msince(server.update_call.init) > 4) {
+	if (server.update_call && commonFunctions.msince(server.update_call.init) > 4) {
 		delete server.update_call;
 	}
 	if (server.update_call || server.stop_call) {
-	} else if (server.live && ssince(server.last_update) > 75) {
+	} else if (server.live && commonFunctions.ssince(server.last_update) > 75) {
 		server.update_call = appengine_call(
 			"update_server",
 			{
